@@ -1,8 +1,8 @@
-package com.retheviper.file_transporter
+package com.retheviper.file.transporter
 
-import com.retheviper.file_transporter.plugins.configureRouting
-import com.retheviper.file_transporter.plugins.configureSecurity
-import com.retheviper.file_transporter.plugins.configureSerialization
+import com.retheviper.file.transporter.plugins.configureRouting
+import com.retheviper.file.transporter.plugins.configureSecurity
+import com.retheviper.file.transporter.plugins.configureSerialization
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 

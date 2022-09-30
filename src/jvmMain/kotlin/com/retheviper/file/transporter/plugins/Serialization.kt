@@ -1,4 +1,4 @@
-package com.retheviper.file_transporter.plugins
+package com.retheviper.file.transporter.plugins
 
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.plugins.contentnegotiation.*

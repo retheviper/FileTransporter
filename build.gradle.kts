@@ -1,6 +1,3 @@
-import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinJsBrowserDsl
-import org.jetbrains.kotlin.gradle.targets.js.subtargets.KotlinBrowserJs
-
 val kotlin_version: String by project
 val ktor_version: String by project
 val logback_version: String by project
@@ -74,7 +71,7 @@ kotlin {
                 implementation("io.ktor:ktor-server-host-common-jvm:$ktor_version")
                 implementation("io.ktor:ktor-server-netty-jvm:$ktor_version")
                 implementation("ch.qos.logback:logback-classic:$logback_version")
-                implementation(compose.desktop.currentOs)
+                implementation(compose.runtime)
             }
         }
         val jvmTest by getting {
@@ -87,7 +84,7 @@ kotlin {
 }
 
 application {
-    mainClass.set("com.retheviper.file_transporter.ServerKt")
+    mainClass.set("com.retheviper.file.transporter.ServerKt")
 
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
@@ -95,9 +92,12 @@ application {
 
 // include JS artifacts in any JAR we generate
 tasks.getByName<Jar>("jvmJar") {
-    val webpackTask = tasks.getByName("jsBrowserWebpack")
+    val webpackTask = tasks.getByName("jsBrowserProductionWebpack")
     dependsOn(webpackTask) // make sure JS gets compiled first
-    from(File("build/distributions", "file-transporter.js")) // bring output file along into the JAR
+    from(
+        File("build/distributions", "file-transporter.js"),
+        File("build/distributions", "file-transporter.js.map")
+    ) // bring output file along into the JAR
 }
 
 tasks {
@@ -117,11 +117,6 @@ distributions {
             }
         }
     }
-}
-
-// Alias "installDist" as "stage" (for cloud providers)
-tasks.create("stage") {
-    dependsOn(tasks.getByName("installDist"))
 }
 
 tasks.getByName<JavaExec>("run") {

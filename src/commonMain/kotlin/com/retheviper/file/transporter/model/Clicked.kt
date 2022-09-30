@@ -1,4 +1,4 @@
-package com.retheviper.file_transporter.model
+package com.retheviper.file.transporter.model
 
 import kotlinx.serialization.Serializable
 

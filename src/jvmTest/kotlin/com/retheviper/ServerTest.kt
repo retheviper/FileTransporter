@@ -1,6 +1,6 @@
 package com.retheviper
 
-import com.retheviper.file_transporter.plugins.configureRouting
+import com.retheviper.file.transporter.plugins.configureRouting
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode

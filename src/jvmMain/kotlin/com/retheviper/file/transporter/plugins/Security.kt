@@ -1,4 +1,4 @@
-package com.retheviper.file_transporter.plugins
+package com.retheviper.file.transporter.plugins
 
 import io.ktor.server.auth.*
 import io.ktor.util.*
