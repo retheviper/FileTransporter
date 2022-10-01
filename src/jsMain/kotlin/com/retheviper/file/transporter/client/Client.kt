@@ -3,6 +3,7 @@ package com.retheviper.file.transporter.client
 import com.retheviper.file.transporter.constant.API_URL
 import com.retheviper.file.transporter.model.Clicked
 import com.retheviper.file.transporter.model.Clicked.Companion.endpoint
+import com.retheviper.file.transporter.model.FileTree
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.js.Js
@@ -22,6 +23,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.util.InternalAPI
+import io.ktor.util.reflect.TypeInfo
 import kotlinx.browser.window
 import org.w3c.files.File
 
@@ -40,11 +42,11 @@ suspend fun sendClicked(number: Int) {
     }
 }
 
-suspend fun getList(target: String): String {
+suspend fun getFileTree(target: String): List<FileTree> {
     return jsonClient.get("$apiUrl/list") {
         parameter("target", target)
         contentType(ContentType.Application.Json)
-    }.bodyAsText()
+    }.body()
 }
 
 @OptIn(InternalAPI::class)

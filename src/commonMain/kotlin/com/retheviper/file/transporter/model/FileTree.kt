@@ -6,6 +6,6 @@ import kotlinx.serialization.Serializable
 data class FileTree(
     val name: String,
     val type: String,
-    val size: Long? = null,
-    val children: List<FileTree>? = null
+    val path: String,
+    val size: Long? = null
 )

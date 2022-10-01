@@ -19,6 +19,9 @@ repositories {
     mavenCentral()
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
 }
+dependencies {
+    implementation("io.ktor:ktor-server-call-logging-jvm:2.1.2")
+}
 
 kotlin {
     js(IR) {
