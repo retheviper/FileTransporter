@@ -10,6 +10,7 @@ A simple file transfer service.
 
 - Compose for Web
 - Ktor
+- kotlinx.serialization
 
 ## How to run
 
@@ -19,4 +20,5 @@ A simple file transfer service.
 
 ## References
 
-- [Full Stack JVM & JS App Hands-On Lab](https://github.com/kotlin-hands-on/jvm-js-fullstack/tree/final)# FileTransporter
+- [Full Stack JVM & JS App Hands-On Lab](https://github.com/kotlin-hands-on/jvm-js-fullstack/tree/final)
+- [Compose Web Landing Page](https://github.com/JetBrains/compose-jb/tree/master/examples/web-landing)
