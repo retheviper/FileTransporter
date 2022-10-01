@@ -22,7 +22,7 @@ import org.jetbrains.compose.web.dom.TextInput
 @Composable
 fun FileTrees(scope: CoroutineScope) {
     var target by remember { mutableStateOf("") }
-    var selectedPath by remember { mutableStateOf(emptyList<FileTree>()) }
+    var selectedFileTree by remember { mutableStateOf(emptyList<FileTree>()) }
 
     TextInput {
         value(target)
@@ -30,7 +30,7 @@ fun FileTrees(scope: CoroutineScope) {
             target = event.value
             if (event.inputType == "enterKey") {
                 scope.launch {
-                    selectedPath = getFileTree(target)
+                    selectedFileTree = getFileTree(target)
                 }
             }
         }
@@ -39,7 +39,7 @@ fun FileTrees(scope: CoroutineScope) {
     Button(attrs = {
         onClick {
             scope.launch {
-                selectedPath = getFileTree(target)
+                selectedFileTree = getFileTree(target)
             }
         }
     }) {
@@ -58,7 +58,7 @@ fun FileTrees(scope: CoroutineScope) {
             onClick {
                 scope.launch {
                     target = target.substringBeforeLast("/").substringBeforeLast("\\")
-                    selectedPath = getFileTree(target)
+                    selectedFileTree = getFileTree(target)
                 }
             }
             if (target.isBlank()) hidden()
@@ -67,7 +67,7 @@ fun FileTrees(scope: CoroutineScope) {
         Text("..")
     }
 
-    selectedPath.forEach { fileTree ->
+    selectedFileTree.forEach { fileTree ->
         Div(
             attrs = {
                 style {
@@ -77,7 +77,7 @@ fun FileTrees(scope: CoroutineScope) {
                     val path = "${fileTree.path}/${fileTree.name}"
                     if (fileTree.isDirectory) {
                         scope.launch {
-                            selectedPath = getFileTree(path)
+                            selectedFileTree = getFileTree(path)
                             target = path
                         }
                     } else {
