@@ -6,7 +6,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.retheviper.file.transporter.client.getFileTree
+import com.retheviper.file.transporter.constant.API_URL
 import com.retheviper.file.transporter.model.FileTree
+import io.ktor.http.encodeURLParameter
+import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.web.css.cursor
@@ -71,24 +74,25 @@ fun FileTrees(scope: CoroutineScope) {
                     cursor("pointer")
                 }
                 onClick {
-                    if (fileTree.type == "directory") {
+                    val path = "${fileTree.path}/${fileTree.name}"
+                    if (fileTree.isDirectory) {
                         scope.launch {
-                            selectedPath = getFileTree(fileTree.path + "/" + fileTree.name)
-                            target = fileTree.path + "/" + fileTree.name
+                            selectedPath = getFileTree(path)
+                            target = path
                         }
                     } else {
-                        // file download
+                        window.open("${window.location.origin}$API_URL/download?filepath=${path.encodeURLParameter()}", "_blank")
                     }
                 }
             }
         ) {
-            if (fileTree.type == "directory") {
+            if (fileTree.isDirectory) {
                 Text("📁 ")
             } else {
                 Text("📄 ")
             }
             Text(fileTree.name)
-            if (fileTree.type == "file") {
+            if (!fileTree.isDirectory) {
                 Text(" (${fileTree.size?.div(1024)?.div(1024)} mb)")
             }
         }

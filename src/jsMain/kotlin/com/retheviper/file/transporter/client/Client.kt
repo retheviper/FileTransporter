@@ -15,15 +15,12 @@ import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsText
-import io.ktor.client.utils.EmptyContent.contentType
 import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.util.InternalAPI
-import io.ktor.util.reflect.TypeInfo
 import kotlinx.browser.window
 import org.w3c.files.File
 
@@ -47,6 +44,12 @@ suspend fun getFileTree(target: String): List<FileTree> {
         parameter("target", target)
         contentType(ContentType.Application.Json)
     }.body()
+}
+
+suspend fun getFile(filepath: String) {
+    jsonClient.get("$apiUrl/download") {
+        parameter("filepath", filepath)
+    }
 }
 
 @OptIn(InternalAPI::class)

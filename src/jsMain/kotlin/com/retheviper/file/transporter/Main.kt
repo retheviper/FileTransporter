@@ -33,68 +33,68 @@ fun main() {
 
     renderComposable(rootElementId = "root") {
         Div({ style { padding(25.px) } }) {
-            Button(attrs = {
-                onClick {
-                    count -= 1
-                    scope.launch {
-                        sendClicked(count)
-                    }
-                }
-            }) {
-                Text("-")
-            }
-
-            Span({ style { padding(15.px) } }) {
-                Text("$count")
-            }
-
-            Button(attrs = {
-                onClick {
-                    count += 1
-                    scope.launch {
-                        sendClicked(count)
-                    }
-                }
-            }) {
-                Text("+")
-            }
-
-            repeat(2) {
-                Br()
-            }
-
-            var checked by remember { mutableStateOf(false) }
-            var file by remember { mutableStateOf<File?>(null) }
-
-            Form(
-                attrs = {
-                    onSubmit {
-                        if (file != null) {
-                            scope.launch {
-                                test(file!!)
-                            }
-                        }
-                        it.preventDefault()
-                    }
-                }
-            ) {
-                FileInput {
-                    accept("image/*")
-                    onChange { event ->
-                        file = event.target.files?.get(0)
-                        println(file)
-                    }
-                }
-                Input(InputType.Submit) {
+//            Button(attrs = {
+//                onClick {
+//                    count -= 1
+//                    scope.launch {
+//                        sendClicked(count)
+//                    }
+//                }
+//            }) {
+//                Text("-")
+//            }
+//
+//            Span({ style { padding(15.px) } }) {
+//                Text("$count")
+//            }
+//
+//            Button(attrs = {
+//                onClick {
+//                    count += 1
+//                    scope.launch {
+//                        sendClicked(count)
+//                    }
+//                }
+//            }) {
+//                Text("+")
+//            }
+//
+//            repeat(2) {
+//                Br()
+//            }
+//
+//            var checked by remember { mutableStateOf(false) }
+//            var file by remember { mutableStateOf<File?>(null) }
+//
+//            Form(
+//                attrs = {
+//                    onSubmit {
+//                        if (file != null) {
+//                            scope.launch {
+//                                test(file!!)
+//                            }
+//                        }
+//                        it.preventDefault()
+//                    }
+//                }
+//            ) {
+//                FileInput {
+//                    accept("image/*")
+//                    onChange { event ->
+//                        file = event.target.files?.get(0)
+//                        println(file)
+//                    }
+//                }
+//                Input(InputType.Submit) {
 //                    if (!checked) {
 //                        disabled()
 //                    }
-                }
-            }
-
-            repeat(2) {
-                Br()
-            }
+//                }
+//            }
+//
+//            repeat(2) {
+//                Br()
+//            }
 
             FileTrees(scope)
         }

@@ -10,11 +10,13 @@ import io.ktor.server.http.content.static
 import io.ktor.server.request.receive
 import io.ktor.server.request.receiveMultipart
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondFile
 import io.ktor.server.response.respondRedirect
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
+import java.nio.file.Files
 import java.nio.file.Path
 
 fun Application.configureRouting() {
@@ -47,6 +49,21 @@ fun Application.configureRouting() {
                 val tree = FileService.getFileTree(path)
                 call.application.environment.log.info("[list] with response body: $tree")
                 call.respond(tree)
+            }
+            get("/download") {
+                try {
+                    val filepath = call.request.queryParameters["filepath"] ?: ""
+                    call.application.environment.log.info("[download] with file: $filepath")
+                    val root = "/Users/youngbinkim"
+                    val path = Path.of(root, filepath)
+                    if (Files.notExists(path)) {
+                        call.respondRedirect("/")
+                    } else {
+                        call.respondFile(path.toFile())
+                    }
+                } catch (e: Exception) {
+                    call.application.environment.log.info("[download] ended with exception: $e")
+                }
             }
         }
     }

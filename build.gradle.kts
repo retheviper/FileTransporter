@@ -73,6 +73,8 @@ kotlin {
                 implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktor_version")
                 implementation("io.ktor:ktor-server-host-common-jvm:$ktor_version")
                 implementation("io.ktor:ktor-server-netty-jvm:$ktor_version")
+                implementation("io.ktor:ktor-server-partial-content:$ktor_version")
+                implementation("io.ktor:ktor-server-auto-head-response:$ktor_version")
                 implementation("ch.qos.logback:logback-classic:$logback_version")
                 implementation(compose.runtime)
             }

@@ -8,4 +8,6 @@ data class FileTree(
     val type: String,
     val path: String,
     val size: Long? = null
-)
+) {
+    var isDirectory: Boolean = type == "directory"
+}
