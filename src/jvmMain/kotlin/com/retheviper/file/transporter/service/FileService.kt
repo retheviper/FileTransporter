@@ -1,5 +1,6 @@
 package com.retheviper.file.transporter.service
 
+import com.retheviper.file.transporter.constant.ROOT_DIRECTORY
 import com.retheviper.file.transporter.model.FileTree
 import io.ktor.http.content.MultiPartData
 import io.ktor.http.content.PartData
@@ -57,7 +58,7 @@ object FileService {
             name = this.fileName.toString(),
             size = this.fileSize(),
             type = if (this.isDirectory()) "directory" else "file",
-            path = this.parent.toString().substringAfter("/Users/youngbinkim")
+            path = this.parent.toString().substringAfter(ROOT_DIRECTORY)
         )
     }
 }

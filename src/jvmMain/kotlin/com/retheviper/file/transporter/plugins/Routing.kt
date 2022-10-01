@@ -1,6 +1,7 @@
 package com.retheviper.file.transporter.plugins
 
 import com.retheviper.file.transporter.constant.API_URL
+import com.retheviper.file.transporter.constant.ROOT_DIRECTORY
 import com.retheviper.file.transporter.model.Clicked
 import com.retheviper.file.transporter.service.FileService
 import io.ktor.http.ContentDisposition
@@ -49,8 +50,7 @@ fun Application.configureRouting() {
             get("/list") {
                 val target = call.request.queryParameters["target"] ?: "/"
                 call.application.environment.log.info("[list] with target: $target")
-                val root = "/Users/youngbinkim"
-                val path = Path.of(root, target)
+                val path = Path.of(ROOT_DIRECTORY, target)
                 val tree = FileService.getFileTree(path)
                 call.application.environment.log.info("[list] with response body: $tree")
                 call.respond(tree)
@@ -59,8 +59,7 @@ fun Application.configureRouting() {
                 try {
                     val filepath = call.request.queryParameters["filepath"] ?: ""
                     call.application.environment.log.info("[download] with file: $filepath")
-                    val root = "/Users/youngbinkim"
-                    val path = Path.of(root, filepath)
+                    val path = Path.of(ROOT_DIRECTORY, filepath)
                     if (Files.notExists(path)) {
                         call.respond(HttpStatusCode.BadRequest, "File not found")
                     } else {
