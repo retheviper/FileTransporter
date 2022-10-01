@@ -46,12 +46,6 @@ suspend fun getFileTree(target: String): List<FileTree> {
     }.body()
 }
 
-suspend fun getFile(filepath: String) {
-    jsonClient.get("$apiUrl/download") {
-        parameter("filepath", filepath)
-    }
-}
-
 @OptIn(InternalAPI::class)
 suspend fun test(file: File) {
     val client = HttpClient(Js)

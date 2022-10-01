@@ -57,7 +57,7 @@ fun FileTrees(scope: CoroutineScope) {
             }
             onClick {
                 scope.launch {
-                    target = target.substringBeforeLast("/")
+                    target = target.substringBeforeLast("/").substringBeforeLast("\\")
                     selectedPath = getFileTree(target)
                 }
             }
