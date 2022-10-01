@@ -1,22 +1,24 @@
 # File transporter
 
-Working on it!
-
 ## TL;DR
 
-A simple file transfer service.
+A simple file transfer service by Full Stack of Kotlin.
 
 ## Used
 
-- Compose for Web
-- Ktor
-- kotlinx.serialization
+- [Compose for Web](https://compose-web.ui.pages.jetbrains.team/)
+- [Ktor](https://ktor.io/)
+- [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization)
 
 ## How to run
+
+Run the following command:
 
 ```bash
 ./gradlew run
 ```
+
+Then, you can access to http://localhost:8080 or http://0.0.0.0:8080.
 
 ## References
 
