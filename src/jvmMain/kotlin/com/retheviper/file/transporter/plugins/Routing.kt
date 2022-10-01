@@ -3,12 +3,17 @@ package com.retheviper.file.transporter.plugins
 import com.retheviper.file.transporter.constant.API_URL
 import com.retheviper.file.transporter.model.Clicked
 import com.retheviper.file.transporter.service.FileService
+import io.ktor.http.ContentDisposition
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.encodeURLPath
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
 import io.ktor.server.http.content.resources
 import io.ktor.server.http.content.static
 import io.ktor.server.request.receive
 import io.ktor.server.request.receiveMultipart
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondFile
 import io.ktor.server.response.respondRedirect
@@ -57,9 +62,16 @@ fun Application.configureRouting() {
                     val root = "/Users/youngbinkim"
                     val path = Path.of(root, filepath)
                     if (Files.notExists(path)) {
-                        call.respondRedirect("/")
+                        call.respond(HttpStatusCode.BadRequest, "File not found")
                     } else {
+                        call.response.header(
+                            HttpHeaders.ContentDisposition,
+                            ContentDisposition.Attachment.withParameter(
+                                ContentDisposition.Parameters.FileName, path.fileName.toString().encodeURLPath()
+                            ).toString()
+                        )
                         call.respondFile(path.toFile())
+                        call.application.environment.log.info("[download] with file: ${path.fileName}")
                     }
                 } catch (e: Exception) {
                     call.application.environment.log.info("[download] ended with exception: $e")
