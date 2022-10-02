@@ -27,6 +27,7 @@ object FileService {
                     withContext(Dispatchers.IO) {
                         Files.createTempFile("ktor", ".tmp")
                     }.apply {
+                        println(this)
                         Files.copy(part.streamProvider(), this)
                         println("FileItem: ${part.originalFileName} = $this")
                     }
@@ -48,11 +49,11 @@ object FileService {
         return withContext(Dispatchers.IO) {
             try {
                 Files.list(getFullPath(target))
+                    .toList()
                     .filter { !it.isHidden() }
                     .map { it.toFileTree() }
-                    .sorted { f1, f2 -> f1.name.compareTo(f2.name) }
-                    .sorted { f1, f2 -> f1.type.compareTo(f2.type) }
-                    .toList()
+                    .sortedBy { it.name }
+                    .sortedBy { it.type }
             } catch (e: Exception) {
                 emptyList()
             }
@@ -64,6 +65,7 @@ object FileService {
             name = this.fileName.toString(),
             size = if (this.isDirectory()) null else this.fileSize(),
             type = if (this.isDirectory()) "directory" else "file",
+            mimeType = if (this.isDirectory()) null else Files.probeContentType(this),
             path = this.parent.toString().substringAfter(ROOT_DIRECTORY)
         )
     }

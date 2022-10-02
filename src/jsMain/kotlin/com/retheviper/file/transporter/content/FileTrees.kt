@@ -7,12 +7,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.retheviper.file.transporter.client.API_URL
 import com.retheviper.file.transporter.client.listFileTree
+import com.retheviper.file.transporter.constant.CONTENT_SIZE_UNIT
 import com.retheviper.file.transporter.model.FileTree
 import com.retheviper.file.transporter.style.pointerCursor
+import io.ktor.http.ContentType
 import io.ktor.http.encodeURLParameter
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.web.dom.Br
 import org.jetbrains.compose.web.dom.Div
 import org.jetbrains.compose.web.dom.Text
 
@@ -23,6 +26,14 @@ fun FileTrees(scope: CoroutineScope) {
 
     scope.launch {
         selectedFileTree = listFileTree(currentPath)
+    }
+
+    Div {
+        Text("Current: $currentPath")
+    }
+
+    repeat(2) {
+        Br()
     }
 
     Div(
@@ -39,8 +50,10 @@ fun FileTrees(scope: CoroutineScope) {
             if (currentPath.isBlank()) hidden()
         }
     ) {
-        Text("◀️ " + previousPath(currentPath))
+        Text("◀️ Return")
     }
+
+    Br()
 
     selectedFileTree.forEach { fileTree ->
         Div(
@@ -67,32 +80,44 @@ fun FileTrees(scope: CoroutineScope) {
             if (fileTree.isDirectory) {
                 Text("📁 ${fileTree.name}")
             } else {
-                Text("📄 ${fileTree.name} (${calculateFileSize(fileTree.size)})")
+                val icon = getIconByMimeType(fileTree.mimeType)
+                val size = calculateFileSize(fileTree.size)
+                Text("$icon ${fileTree.name} ($size)")
             }
         }
     }
 }
 
+fun getIconByMimeType(mimeType: String?): String {
+    if (mimeType == null) return "📄"
+    return when (ContentType.parse(mimeType).contentType) {
+        "image" -> "🏞"
+        "video" -> "🎬"
+        "audio" -> "🎵"
+        "text" -> "🗓"
+        "application" -> "🖥"
+        else -> "📄"
+    }
+}
 
 private fun previousPath(path: String): String {
     return path.substringBeforeLast("/").substringBeforeLast("\\")
 }
 
-
-private fun calculateFileSize(origin: Long?): String {
-    val size = origin ?: 0
-    return if (size < 1024) {
-        "$size b"
+private fun calculateFileSize(size: Long?): String {
+    val byte = size ?: 0
+    return if (byte < CONTENT_SIZE_UNIT) {
+        "$byte byte"
     } else {
-        val kb = size / 1024
-        if (kb < 1024) {
+        val kb = byte / CONTENT_SIZE_UNIT
+        if (kb < CONTENT_SIZE_UNIT) {
             "$kb kb"
         } else {
-            val mb = kb / 1024
-            if (mb < 1024) {
+            val mb = kb / CONTENT_SIZE_UNIT
+            if (mb < CONTENT_SIZE_UNIT) {
                 "$mb mb"
             } else {
-                val gb = mb / 1024
+                val gb = mb / CONTENT_SIZE_UNIT
                 "$gb gb"
             }
         }

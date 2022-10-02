@@ -7,6 +7,7 @@ data class FileTree(
     val name: String,
     val type: String,
     val path: String,
+    val mimeType: String? = null,
     val size: Long? = null
 ) {
     var isDirectory: Boolean = type == "directory"

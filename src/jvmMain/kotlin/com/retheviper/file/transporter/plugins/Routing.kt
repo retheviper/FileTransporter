@@ -19,6 +19,8 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.nio.file.Files
 
 fun Application.configureRouting() {
@@ -43,7 +45,7 @@ fun Application.configureRouting() {
                 val target = call.request.queryParameters["target"] ?: "/"
                 call.application.environment.log.info("[list] request with: $target")
                 val tree = FileService.listFileTree(target)
-                call.application.environment.log.info("[list] responses with: $tree")
+                call.application.environment.log.info("[list] responses with: ${Json.encodeToString(tree)}")
                 call.respond(tree)
             }
 
@@ -56,9 +58,10 @@ fun Application.configureRouting() {
                         call.respond(HttpStatusCode.BadRequest, "File not found")
                     } else {
                         call.response.header(
-                            HttpHeaders.ContentDisposition,
-                            ContentDisposition.Attachment.withParameter(
-                                ContentDisposition.Parameters.FileName, path.fileName.toString().encodeURLPath()
+                            name = HttpHeaders.ContentDisposition,
+                            value = ContentDisposition.Attachment.withParameter(
+                                key = ContentDisposition.Parameters.FileName,
+                                value = path.fileName.toString().encodeURLPath()
                             ).toString()
                         )
                         call.respondFile(path.toFile())
