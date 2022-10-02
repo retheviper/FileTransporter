@@ -84,7 +84,7 @@ fun FileTrees(scope: CoroutineScope) {
                     } else {
                         window.open(
                             "$API_URL/download?filepath=${path.encodeURLParameter()}",
-                            "_blank"
+                            "_parent"
                         )
                     }
                 }

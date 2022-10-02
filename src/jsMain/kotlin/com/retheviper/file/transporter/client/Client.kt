@@ -2,7 +2,6 @@ package com.retheviper.file.transporter.client
 
 import com.retheviper.file.transporter.constant.API_BASE_PATH
 import com.retheviper.file.transporter.model.Clicked
-import com.retheviper.file.transporter.model.Clicked.Companion.endpoint
 import com.retheviper.file.transporter.model.FileTree
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -33,7 +32,7 @@ val jsonClient = HttpClient {
 }
 
 suspend fun sendClicked(number: Int) {
-    jsonClient.post("$API_URL$endpoint") {
+    jsonClient.post("$API_URL${Clicked.endpoint}") {
         contentType(ContentType.Application.Json)
         setBody(Clicked(number))
     }
