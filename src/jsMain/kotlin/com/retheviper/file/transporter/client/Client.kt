@@ -1,6 +1,6 @@
 package com.retheviper.file.transporter.client
 
-import com.retheviper.file.transporter.constant.API_URL
+import com.retheviper.file.transporter.constant.API_BASE_PATH
 import com.retheviper.file.transporter.model.Clicked
 import com.retheviper.file.transporter.model.Clicked.Companion.endpoint
 import com.retheviper.file.transporter.model.FileTree
@@ -24,7 +24,7 @@ import io.ktor.util.InternalAPI
 import kotlinx.browser.window
 import org.w3c.files.File
 
-private val apiUrl = "${window.location.origin}$API_URL"
+val API_URL = "${window.location.origin}$API_BASE_PATH"
 
 val jsonClient = HttpClient {
     install(ContentNegotiation) {
@@ -33,14 +33,14 @@ val jsonClient = HttpClient {
 }
 
 suspend fun sendClicked(number: Int) {
-    jsonClient.post("$apiUrl$endpoint") {
+    jsonClient.post("$API_URL$endpoint") {
         contentType(ContentType.Application.Json)
         setBody(Clicked(number))
     }
 }
 
 suspend fun getFileTree(target: String): List<FileTree> {
-    return jsonClient.get("$apiUrl/list") {
+    return jsonClient.get("$API_URL/list") {
         parameter("target", target)
         contentType(ContentType.Application.Json)
     }.body()
@@ -51,7 +51,7 @@ suspend fun test(file: File) {
     val client = HttpClient(Js)
 
     val response: HttpResponse = client.submitFormWithBinaryData(
-        url = "$apiUrl/upload",
+        url = "$API_URL/upload",
         formData = formData {
             append("file", file, Headers.build {
                 append(HttpHeaders.ContentType, file.type)

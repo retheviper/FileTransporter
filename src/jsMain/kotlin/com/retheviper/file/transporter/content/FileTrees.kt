@@ -5,14 +5,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.retheviper.file.transporter.client.API_URL
 import com.retheviper.file.transporter.client.getFileTree
-import com.retheviper.file.transporter.constant.API_URL
 import com.retheviper.file.transporter.model.FileTree
+import com.retheviper.file.transporter.style.pointerCursor
 import io.ktor.http.encodeURLParameter
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.web.css.cursor
 import org.jetbrains.compose.web.dom.Br
 import org.jetbrains.compose.web.dom.Button
 import org.jetbrains.compose.web.dom.Div
@@ -21,16 +21,16 @@ import org.jetbrains.compose.web.dom.TextInput
 
 @Composable
 fun FileTrees(scope: CoroutineScope) {
-    var target by remember { mutableStateOf("") }
+    var targetPath by remember { mutableStateOf("") }
     var selectedFileTree by remember { mutableStateOf(emptyList<FileTree>()) }
 
     TextInput {
-        value(target)
+        value(targetPath)
         onInput { event ->
-            target = event.value
+            targetPath = event.value
             if (event.inputType == "enterKey") {
                 scope.launch {
-                    selectedFileTree = getFileTree(target)
+                    selectedFileTree = getFileTree(targetPath)
                 }
             }
         }
@@ -40,7 +40,7 @@ fun FileTrees(scope: CoroutineScope) {
         attrs = {
             onClick {
                 scope.launch {
-                    selectedFileTree = getFileTree(target)
+                    selectedFileTree = getFileTree(targetPath)
                 }
             }
         }) {
@@ -54,36 +54,36 @@ fun FileTrees(scope: CoroutineScope) {
     Div(
         attrs = {
             style {
-                cursor("pointer")
+                pointerCursor()
             }
             onClick {
                 scope.launch {
-                    target = target.substringBeforeLast("/").substringBeforeLast("\\")
-                    selectedFileTree = getFileTree(target)
+                    targetPath = previousPath(targetPath)
+                    selectedFileTree = getFileTree(targetPath)
                 }
             }
-            if (target.isBlank()) hidden()
+            if (targetPath.isBlank()) hidden()
         }
     ) {
-        Text("◀️")
+        Text("◀️ " + previousPath(targetPath))
     }
 
     selectedFileTree.forEach { fileTree ->
         Div(
             attrs = {
                 style {
-                    cursor("pointer")
+                    pointerCursor()
                 }
                 onClick {
                     val path = "${fileTree.path}/${fileTree.name}"
                     if (fileTree.isDirectory) {
                         scope.launch {
                             selectedFileTree = getFileTree(path)
-                            target = path
+                            targetPath = path
                         }
                     } else {
                         window.open(
-                            "${window.location.origin}$API_URL/download?filepath=${path.encodeURLParameter()}",
+                            "$API_URL/download?filepath=${path.encodeURLParameter()}",
                             "_blank"
                         )
                     }
@@ -98,6 +98,12 @@ fun FileTrees(scope: CoroutineScope) {
         }
     }
 }
+
+
+private fun previousPath(path: String): String {
+    return path.substringBeforeLast("/").substringBeforeLast("\\")
+}
+
 
 private fun calculateFileSize(origin: Long?): String {
     val size = origin ?: 0

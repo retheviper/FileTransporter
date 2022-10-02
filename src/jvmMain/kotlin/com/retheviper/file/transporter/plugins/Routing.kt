@@ -1,6 +1,6 @@
 package com.retheviper.file.transporter.plugins
 
-import com.retheviper.file.transporter.constant.API_URL
+import com.retheviper.file.transporter.constant.API_BASE_PATH
 import com.retheviper.file.transporter.constant.ROOT_DIRECTORY
 import com.retheviper.file.transporter.model.Clicked
 import com.retheviper.file.transporter.service.FileService
@@ -35,7 +35,7 @@ fun Application.configureRouting() {
             resources("/")
         }
 
-        route(API_URL) {
+        route(API_BASE_PATH) {
             post(Clicked.endpoint) {
                 val clicked = call.receive<Clicked>()
                 call.application.environment.log.info("[clicked] with request body: $clicked")

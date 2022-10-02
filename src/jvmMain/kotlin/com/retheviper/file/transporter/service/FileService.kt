@@ -55,10 +55,11 @@ object FileService {
         }
     }
 
+
     private fun Path.toFileTree(): FileTree {
         return FileTree(
             name = this.fileName.toString(),
-            size = this.fileSize(),
+            size = if (this.isDirectory()) null else this.fileSize(),
             type = if (this.isDirectory()) "directory" else "file",
             path = this.parent.toString().substringAfter(ROOT_DIRECTORY)
         )
