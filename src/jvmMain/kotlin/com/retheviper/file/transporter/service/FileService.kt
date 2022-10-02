@@ -46,6 +46,8 @@ object FileService {
                 Files.list(root)
                     .filter { !it.isHidden() }
                     .map { it.toFileTree() }
+                    .sorted { f1, f2 -> f1.name.compareTo(f2.name) }
+                    .sorted { f1, f2 -> f1.type.compareTo(f2.type) }
                     .toList()
             } catch (e: Exception) {
                 emptyList()

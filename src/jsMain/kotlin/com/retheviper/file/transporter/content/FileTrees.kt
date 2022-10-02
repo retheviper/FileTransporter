@@ -36,13 +36,14 @@ fun FileTrees(scope: CoroutineScope) {
         }
     }
 
-    Button(attrs = {
-        onClick {
-            scope.launch {
-                selectedFileTree = getFileTree(target)
+    Button(
+        attrs = {
+            onClick {
+                scope.launch {
+                    selectedFileTree = getFileTree(target)
+                }
             }
-        }
-    }) {
+        }) {
         Text("Get list")
     }
 
@@ -64,7 +65,7 @@ fun FileTrees(scope: CoroutineScope) {
             if (target.isBlank()) hidden()
         }
     ) {
-        Text("..")
+        Text("◀️")
     }
 
     selectedFileTree.forEach { fileTree ->
@@ -81,19 +82,38 @@ fun FileTrees(scope: CoroutineScope) {
                             target = path
                         }
                     } else {
-                        window.open("${window.location.origin}$API_URL/download?filepath=${path.encodeURLParameter()}", "_blank")
+                        window.open(
+                            "${window.location.origin}$API_URL/download?filepath=${path.encodeURLParameter()}",
+                            "_blank"
+                        )
                     }
                 }
             }
         ) {
             if (fileTree.isDirectory) {
-                Text("📁 ")
+                Text("📁 ${fileTree.name}")
             } else {
-                Text("📄 ")
+                Text("📄 ${fileTree.name} (${calculateFileSize(fileTree.size)})")
             }
-            Text(fileTree.name)
-            if (!fileTree.isDirectory) {
-                Text(" (${fileTree.size?.div(1024)?.div(1024)} mb)")
+        }
+    }
+}
+
+private fun calculateFileSize(origin: Long?): String {
+    val size = origin ?: 0
+    return if (size < 1024) {
+        "$size b"
+    } else {
+        val kb = size / 1024
+        if (kb < 1024) {
+            "$kb kb"
+        } else {
+            val mb = kb / 1024
+            if (mb < 1024) {
+                "$mb mb"
+            } else {
+                val gb = mb / 1024
+                "$gb gb"
             }
         }
     }
