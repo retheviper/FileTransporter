@@ -1,7 +1,6 @@
 package com.retheviper.file.transporter.client
 
 import com.retheviper.file.transporter.constant.API_BASE_PATH
-import com.retheviper.file.transporter.model.Clicked
 import com.retheviper.file.transporter.model.FileTree
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -11,8 +10,6 @@ import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.Headers
@@ -31,14 +28,7 @@ val jsonClient = HttpClient {
     }
 }
 
-suspend fun sendClicked(number: Int) {
-    jsonClient.post("$API_URL${Clicked.endpoint}") {
-        contentType(ContentType.Application.Json)
-        setBody(Clicked(number))
-    }
-}
-
-suspend fun getFileTree(target: String): List<FileTree> {
+suspend fun listFileTree(target: String): List<FileTree> {
     return jsonClient.get("$API_URL/list") {
         parameter("target", target)
         contentType(ContentType.Application.Json)

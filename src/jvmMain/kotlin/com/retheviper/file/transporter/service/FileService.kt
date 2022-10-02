@@ -40,10 +40,14 @@ object FileService {
         }
     }
 
-    suspend fun getFileTree(root: Path): List<FileTree> {
+    fun getFullPath(path: String): Path {
+        return Path.of(ROOT_DIRECTORY, path)
+    }
+
+    suspend fun listFileTree(target: String): List<FileTree> {
         return withContext(Dispatchers.IO) {
             try {
-                Files.list(root)
+                Files.list(getFullPath(target))
                     .filter { !it.isHidden() }
                     .map { it.toFileTree() }
                     .sorted { f1, f2 -> f1.name.compareTo(f2.name) }
@@ -54,7 +58,6 @@ object FileService {
             }
         }
     }
-
 
     private fun Path.toFileTree(): FileTree {
         return FileTree(
