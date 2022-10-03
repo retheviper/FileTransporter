@@ -15,6 +15,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
+import io.ktor.http.encodeURLParameter
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.util.InternalAPI
 import kotlinx.browser.window
@@ -42,10 +43,14 @@ suspend fun test(file: File) {
     val response: HttpResponse = client.submitFormWithBinaryData(
         url = "$API_URL/upload",
         formData = formData {
-            append("file", file, Headers.build {
-                append(HttpHeaders.ContentType, file.type)
-                append(HttpHeaders.ContentDisposition, "filename=${file.name}")
-            })
+            append(
+                key = "file",
+                value = file,
+                headers = Headers.build {
+                    append(name = HttpHeaders.ContentType, value = file.type)
+                    append(name = HttpHeaders.ContentDisposition, value = "filename=${file.name.encodeURLParameter()}")
+                }
+            )
         }
     )
 

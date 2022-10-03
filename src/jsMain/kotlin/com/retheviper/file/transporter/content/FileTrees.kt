@@ -90,13 +90,15 @@ fun FileTrees(scope: CoroutineScope) {
 
 fun getIconByMimeType(mimeType: String?): String {
     if (mimeType == null) return "📄"
-    return when (ContentType.parse(mimeType).contentType) {
-        "image" -> "🏞"
-        "video" -> "🎬"
-        "audio" -> "🎵"
-        "text" -> "🗓"
-        "application" -> "🖥"
-        else -> "📄"
+    return with(mimeType) {
+        when {
+            contains(ContentType.Image.Any.contentType) -> "🏞"
+            contains(ContentType.Video.Any.contentType) -> "🎬"
+            contains(ContentType.Audio.Any.contentType) -> "🎵"
+            contains(ContentType.Text.Any.contentType) -> "🗓"
+            contains(ContentType.Application.Any.contentType) -> "🖥"
+            else -> "📄"
+        }
     }
 }
 
