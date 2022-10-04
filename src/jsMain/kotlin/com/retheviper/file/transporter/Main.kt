@@ -46,6 +46,9 @@ fun main() {
 //                Br()
 //            }
 
+            // Problem: Upload multipart data sends empty file
+            // https://stackoverflow.com/questions/73450329/compose-for-web-uploading-a-file-submitted-via-a-multipart-form
+
             FileTrees(scope)
         }
     }
