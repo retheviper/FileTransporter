@@ -3,7 +3,7 @@ package com.retheviper.file.transporter.model
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class FileTree(
+data class PathItem(
     val name: String,
     val type: String,
     val path: String,

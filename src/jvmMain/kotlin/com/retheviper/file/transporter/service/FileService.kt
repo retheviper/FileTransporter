@@ -1,7 +1,7 @@
 package com.retheviper.file.transporter.service
 
 import com.retheviper.file.transporter.constant.ROOT_DIRECTORY
-import com.retheviper.file.transporter.model.FileTree
+import com.retheviper.file.transporter.model.PathItem
 import io.ktor.http.content.MultiPartData
 import io.ktor.http.content.PartData
 import io.ktor.http.content.forEachPart
@@ -45,7 +45,7 @@ object FileService {
         return Path.of(ROOT_DIRECTORY, path)
     }
 
-    suspend fun listFileTree(target: String): List<FileTree> {
+    suspend fun listFileTree(target: String): List<PathItem> {
         return withContext(Dispatchers.IO) {
             try {
                 Files.list(getFullPath(target))
@@ -60,8 +60,8 @@ object FileService {
         }
     }
 
-    private fun Path.toFileTree(): FileTree {
-        return FileTree(
+    private fun Path.toFileTree(): PathItem {
+        return PathItem(
             name = this.fileName.toString(),
             size = if (this.isDirectory()) null else this.fileSize(),
             type = if (this.isDirectory()) "directory" else "file",

@@ -1,7 +1,9 @@
 package com.retheviper.file.transporter.client
 
 import com.retheviper.file.transporter.constant.API_BASE_PATH
-import com.retheviper.file.transporter.model.FileTree
+import com.retheviper.file.transporter.constant.ENDPOINT_LIST
+import com.retheviper.file.transporter.constant.ENPOINT_UPLOAD
+import com.retheviper.file.transporter.model.PathItem
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.js.Js
@@ -10,7 +12,6 @@ import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
-import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
@@ -29,8 +30,8 @@ val jsonClient = HttpClient {
     }
 }
 
-suspend fun listFileTree(target: String): List<FileTree> {
-    return jsonClient.get("$API_URL/list") {
+suspend fun listPathItem(target: String): List<PathItem> {
+    return jsonClient.get("$API_URL$ENDPOINT_LIST") {
         parameter("target", target)
         contentType(ContentType.Application.Json)
     }.body()
@@ -42,7 +43,7 @@ suspend fun upload(file: File) {
     val client = HttpClient(Js)
 
     client.submitFormWithBinaryData(
-        url = "$API_URL/upload",
+        url = "$API_URL$ENPOINT_UPLOAD",
         formData = formData {
             append(
                 key = "file",

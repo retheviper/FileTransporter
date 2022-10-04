@@ -1,6 +1,10 @@
 package com.retheviper.file.transporter.plugins
 
 import com.retheviper.file.transporter.constant.API_BASE_PATH
+import com.retheviper.file.transporter.constant.ENDPOINT_DOWNLOAD
+import com.retheviper.file.transporter.constant.ENDPOINT_LIST
+import com.retheviper.file.transporter.constant.ENPOINT_UPLOAD
+import com.retheviper.file.transporter.constant.SLASH
 import com.retheviper.file.transporter.service.FileService
 import io.ktor.http.ContentDisposition
 import io.ktor.http.HttpHeaders
@@ -25,31 +29,31 @@ import java.nio.file.Files
 
 fun Application.configureRouting() {
     routing {
-        get("/") {
+        get {
             call.respondRedirect("/index.html")
         }
-        // Static plugin. Try to access `/static/index.html`
-        static("/") {
-            resources("/")
+        static {
+            resources(SLASH)
         }
 
         route(API_BASE_PATH) {
-            post("/upload") {
+            post(ENPOINT_UPLOAD) {
                 call.application.environment.log.info("[upload] request")
                 val multipart = call.receiveMultipart()
                 FileService.saveFile(multipart)
-                call.respondRedirect("/")
+                call.application.environment.log.info("[upload] end")
+                call.respondRedirect("/index.html")
             }
 
-            get("/list") {
-                val target = call.request.queryParameters["target"] ?: "/"
+            get(ENDPOINT_LIST) {
+                val target = call.request.queryParameters["target"]?.ifBlank { SLASH } ?: SLASH
                 call.application.environment.log.info("[list] request with: $target")
                 val tree = FileService.listFileTree(target)
                 call.application.environment.log.info("[list] responses with: ${Json.encodeToString(tree)}")
                 call.respond(tree)
             }
 
-            get("/download") {
+            get(ENDPOINT_DOWNLOAD) {
                 try {
                     val filepath = call.request.queryParameters["filepath"] ?: ""
                     call.application.environment.log.info("[download] request with: $filepath")

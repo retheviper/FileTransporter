@@ -1,6 +1,6 @@
 package com.retheviper.file.transporter
 
-import com.retheviper.file.transporter.content.FileTrees
+import com.retheviper.file.transporter.content.FileBrowser
 import kotlinx.coroutines.MainScope
 import org.jetbrains.compose.web.css.padding
 import org.jetbrains.compose.web.css.px
@@ -13,43 +13,7 @@ fun main() {
 
     renderComposable(rootElementId = "root") {
         Div({ style { padding(25.px) } }) {
-//            var checked by remember { mutableStateOf(false) }
-//            var file by remember { mutableStateOf<File?>(null) }
-//
-//            Form(
-//                attrs = {
-//                    onSubmit {
-//                        if (file != null) {
-//                            scope.launch {
-//                                test(file!!)
-//                            }
-//                        }
-//                        it.preventDefault()
-//                    }
-//                }
-//            ) {
-//                FileInput {
-//                    accept("image/*")
-//                    onChange { event ->
-//                        file = event.target.files?.get(0)
-//                        println(file)
-//                    }
-//                }
-//                Input(InputType.Submit) {
-//                    if (!checked) {
-//                        disabled()
-//                    }
-//                }
-//            }
-//
-//            repeat(2) {
-//                Br()
-//            }
-
-            // Problem: Upload multipart data sends empty file
-            // https://stackoverflow.com/questions/73450329/compose-for-web-uploading-a-file-submitted-via-a-multipart-form
-
-            FileTrees(scope)
+            FileBrowser(scope)
         }
     }
 }
