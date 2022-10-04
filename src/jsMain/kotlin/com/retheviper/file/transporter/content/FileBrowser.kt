@@ -23,7 +23,6 @@ import org.jetbrains.compose.web.attributes.FormMethod
 import org.jetbrains.compose.web.attributes.InputType
 import org.jetbrains.compose.web.attributes.encType
 import org.jetbrains.compose.web.attributes.method
-import org.jetbrains.compose.web.css.selectors.CSSSelector.PseudoClass.scope
 import org.jetbrains.compose.web.dom.Br
 import org.jetbrains.compose.web.dom.Div
 import org.jetbrains.compose.web.dom.Form
