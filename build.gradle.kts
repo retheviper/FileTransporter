@@ -76,6 +76,7 @@ kotlin {
                 implementation("io.ktor:ktor-server-partial-content:$ktor_version")
                 implementation("io.ktor:ktor-server-auto-head-response:$ktor_version")
                 implementation("io.ktor:ktor-network-tls-certificates:$ktor_version")
+                implementation("io.ktor:ktor-server-call-logging:$ktor_version")
                 implementation("ch.qos.logback:logback-classic:$logback_version")
                 implementation(compose.runtime)
             }

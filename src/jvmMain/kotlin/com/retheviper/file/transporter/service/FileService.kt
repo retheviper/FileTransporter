@@ -25,11 +25,13 @@ object FileService {
 
                 is PartData.FileItem -> {
                     withContext(Dispatchers.IO) {
-                        Files.createTempFile("ktor", ".tmp")
-                    }.apply {
-                        println(this)
-                        Files.copy(part.streamProvider(), this)
-                        println("FileItem: ${part.originalFileName} = $this")
+                        val file = Files.createTempFile("ktor", ".tmp")
+                        part.streamProvider().use { input ->
+                            Files.newOutputStream(file).use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        println("FileItem: ${part.originalFileName} = $file")
                     }
                 }
 

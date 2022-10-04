@@ -23,8 +23,6 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import java.nio.file.Files
 
 fun Application.configureRouting() {
@@ -34,29 +32,25 @@ fun Application.configureRouting() {
         }
         static {
             resources(SLASH)
+
         }
 
         route(API_BASE_PATH) {
             post(ENPOINT_UPLOAD) {
-                call.application.environment.log.info("[upload] request")
                 val multipart = call.receiveMultipart()
                 FileService.saveFile(multipart)
-                call.application.environment.log.info("[upload] end")
                 call.respondRedirect("/index.html")
             }
 
             get(ENDPOINT_LIST) {
                 val target = call.request.queryParameters["target"]?.ifBlank { SLASH } ?: SLASH
-                call.application.environment.log.info("[list] request with: $target")
                 val tree = FileService.listFileTree(target)
-                call.application.environment.log.info("[list] responses with: ${Json.encodeToString(tree)}")
                 call.respond(tree)
             }
 
             get(ENDPOINT_DOWNLOAD) {
                 try {
                     val filepath = call.request.queryParameters["filepath"] ?: ""
-                    call.application.environment.log.info("[download] request with: $filepath")
                     val path = FileService.getFullPath(filepath)
                     if (Files.notExists(path)) {
                         call.respond(HttpStatusCode.BadRequest, "File not found")
@@ -69,10 +63,9 @@ fun Application.configureRouting() {
                             ).toString()
                         )
                         call.respondFile(path.toFile())
-                        call.application.environment.log.info("[download] responses with: ${path.fileName}")
                     }
                 } catch (e: Exception) {
-                    call.application.environment.log.info("[download] ended with: $e")
+                    call.application.environment.log.info(e.message)
                 }
             }
         }

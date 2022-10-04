@@ -1,6 +1,7 @@
 package com.retheviper.file.transporter
 
 import com.retheviper.file.transporter.plugins.configureContent
+import com.retheviper.file.transporter.plugins.configureLogging
 import com.retheviper.file.transporter.plugins.configureRouting
 import com.retheviper.file.transporter.plugins.configureSerialization
 import io.ktor.network.tls.certificates.generateCertificate
@@ -36,6 +37,7 @@ fun main() {
         }
 
 //        module(Application::configureSecurity)
+        module(Application::configureLogging)
         module(Application::configureSerialization)
         module(Application::configureRouting)
         module(Application::configureContent)
