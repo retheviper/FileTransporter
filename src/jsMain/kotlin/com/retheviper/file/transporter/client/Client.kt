@@ -37,10 +37,11 @@ suspend fun listFileTree(target: String): List<FileTree> {
 }
 
 @OptIn(InternalAPI::class)
-suspend fun test(file: File) {
+@Deprecated("Not working with File")
+suspend fun upload(file: File) {
     val client = HttpClient(Js)
 
-    val response: HttpResponse = client.submitFormWithBinaryData(
+    client.submitFormWithBinaryData(
         url = "$API_URL/upload",
         formData = formData {
             append(
@@ -53,6 +54,4 @@ suspend fun test(file: File) {
             )
         }
     )
-
-//    println(response.bodyAsText())
 }

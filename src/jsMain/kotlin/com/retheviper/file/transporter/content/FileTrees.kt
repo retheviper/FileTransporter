@@ -37,7 +37,7 @@ fun FileTrees(scope: CoroutineScope) {
     }
 
     Div(
-        attrs = {
+        {
             style {
                 pointerCursor()
             }
@@ -57,7 +57,7 @@ fun FileTrees(scope: CoroutineScope) {
 
     selectedFileTree.forEach { fileTree ->
         Div(
-            attrs = {
+            {
                 style {
                     pointerCursor()
                 }
