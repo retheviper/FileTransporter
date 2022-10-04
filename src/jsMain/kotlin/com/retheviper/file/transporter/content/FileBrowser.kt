@@ -23,6 +23,7 @@ import org.jetbrains.compose.web.attributes.FormMethod
 import org.jetbrains.compose.web.attributes.InputType
 import org.jetbrains.compose.web.attributes.encType
 import org.jetbrains.compose.web.attributes.method
+import org.jetbrains.compose.web.css.selectors.CSSSelector.PseudoClass.scope
 import org.jetbrains.compose.web.dom.Br
 import org.jetbrains.compose.web.dom.Div
 import org.jetbrains.compose.web.dom.Form
@@ -44,27 +45,6 @@ fun FileBrowser(scope: CoroutineScope) {
         Text("Current: $currentPath")
     }
 
-    repeat(2) {
-        Br()
-    }
-
-    Div(
-        {
-            style {
-                pointerCursor()
-            }
-            onClick {
-                scope.launch {
-                    currentPath = previousPath(currentPath)
-                    selectedPathItems = listPathItem(currentPath)
-                }
-            }
-            if (currentPath.isBlank()) hidden()
-        }
-    ) {
-        Text("◀️ Return")
-    }
-
     Br()
 
     // Problem: Upload multipart data sends empty file
@@ -82,6 +62,27 @@ fun FileBrowser(scope: CoroutineScope) {
     }
 
     Br()
+
+    if (currentPath.isBlank()) {
+        Br()
+    } else {
+        Div(
+            {
+                style {
+                    pointerCursor()
+                }
+                onClick {
+                    scope.launch {
+                        currentPath = previousPath(currentPath)
+                        selectedPathItems = listPathItem(currentPath)
+                    }
+                }
+            }
+        ) {
+            Text("◀️ Return")
+        }
+    }
+
 
     selectedPathItems.forEach { pathItem ->
         Div(
