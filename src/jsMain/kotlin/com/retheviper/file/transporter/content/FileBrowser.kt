@@ -7,17 +7,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.retheviper.file.transporter.client.API_URL
 import com.retheviper.file.transporter.client.listPathItem
-import com.retheviper.file.transporter.constant.CONTENT_SIZE_UNIT_BYTE
-import com.retheviper.file.transporter.constant.CONTENT_SIZE_UNIT_GIGABYTE
-import com.retheviper.file.transporter.constant.CONTENT_SIZE_UNIT_KILOBYTE
-import com.retheviper.file.transporter.constant.CONTENT_SIZE_UNIT_MEGABYTE
-import com.retheviper.file.transporter.constant.CONTENT_SIZE_UNIT_VALUE
 import com.retheviper.file.transporter.constant.ENDPOINT_DOWNLOAD
 import com.retheviper.file.transporter.constant.ENPOINT_UPLOAD
 import com.retheviper.file.transporter.constant.SLASH
 import com.retheviper.file.transporter.model.PathItem
 import com.retheviper.file.transporter.style.pointerCursor
-import io.ktor.http.ContentType
+import com.retheviper.file.transporter.util.FileInfoUtil
 import io.ktor.http.encodeURLParameter
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
@@ -85,7 +80,7 @@ fun FileBrowser(scope: CoroutineScope) {
 }
 
 @Composable
-fun FileUploadForm(currentPath: String) {
+private fun FileUploadForm(currentPath: String) {
     Div {
         Form(
             action = "$API_URL$ENPOINT_UPLOAD",
@@ -128,8 +123,8 @@ private fun FileItem(pathItem: PathItem, onClick: () -> Unit) {
         if (pathItem.isDirectory) {
             Text("📁 ${pathItem.name}")
         } else {
-            val icon = getIconByMimeType(pathItem.mimeType)
-            val size = calculateFileSize(pathItem.size ?: 0)
+            val icon = FileInfoUtil.getIconByMimeType(pathItem.mimeType)
+            val size = FileInfoUtil.formatFileSizeWithUnit(pathItem.size ?: 0)
             Text("$icon ${pathItem.name} ($size)")
         }
     }
@@ -137,32 +132,4 @@ private fun FileItem(pathItem: PathItem, onClick: () -> Unit) {
 
 private fun previousPath(path: String): String {
     return path.substringBeforeLast(SLASH).substringBeforeLast("\\")
-}
-
-fun getIconByMimeType(mimeType: String?): String {
-    if (mimeType == null) return "📄"
-    return when (mimeType.substringBefore(SLASH)) {
-        ContentType.Image.Any.contentType -> "🏞"
-        ContentType.Video.Any.contentType -> "🎬"
-        ContentType.Audio.Any.contentType -> "🎵"
-        ContentType.Text.Any.contentType -> "🗓"
-        ContentType.Application.Any.contentType -> "🖥"
-        else -> "📄"
-    }
-}
-
-private fun calculateFileSize(size: Long): String {
-    val unit = when {
-        size < CONTENT_SIZE_UNIT_VALUE -> CONTENT_SIZE_UNIT_BYTE
-        size < CONTENT_SIZE_UNIT_VALUE * CONTENT_SIZE_UNIT_VALUE -> CONTENT_SIZE_UNIT_KILOBYTE
-        size < CONTENT_SIZE_UNIT_VALUE * CONTENT_SIZE_UNIT_VALUE * CONTENT_SIZE_UNIT_VALUE -> CONTENT_SIZE_UNIT_MEGABYTE
-        else -> CONTENT_SIZE_UNIT_GIGABYTE
-    }
-    val value = when (unit) {
-        CONTENT_SIZE_UNIT_BYTE -> size
-        CONTENT_SIZE_UNIT_KILOBYTE -> size / CONTENT_SIZE_UNIT_VALUE
-        CONTENT_SIZE_UNIT_MEGABYTE -> size / CONTENT_SIZE_UNIT_VALUE / CONTENT_SIZE_UNIT_VALUE
-        else -> size / CONTENT_SIZE_UNIT_VALUE / CONTENT_SIZE_UNIT_VALUE / CONTENT_SIZE_UNIT_VALUE
-    }
-    return "$value $unit"
 }
