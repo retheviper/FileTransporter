@@ -9,7 +9,7 @@ import org.slf4j.event.Level
 
 fun Application.configureLogging() {
     install(CallLogging) {
-        level = Level.INFO
+        level = Level.ERROR
         format { call ->
             val status = call.response.status()
             val httpMethod = call.request.httpMethod.value

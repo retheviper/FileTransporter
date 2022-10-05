@@ -7,7 +7,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.retheviper.file.transporter.client.API_URL
 import com.retheviper.file.transporter.client.listPathItem
-import com.retheviper.file.transporter.constant.CONTENT_SIZE_UNIT
+import com.retheviper.file.transporter.constant.CONTENT_SIZE_UNIT_BYTE
+import com.retheviper.file.transporter.constant.CONTENT_SIZE_UNIT_GIGABYTE
+import com.retheviper.file.transporter.constant.CONTENT_SIZE_UNIT_KILOBYTE
+import com.retheviper.file.transporter.constant.CONTENT_SIZE_UNIT_MEGABYTE
+import com.retheviper.file.transporter.constant.CONTENT_SIZE_UNIT_VALUE
 import com.retheviper.file.transporter.constant.ENDPOINT_DOWNLOAD
 import com.retheviper.file.transporter.constant.ENPOINT_UPLOAD
 import com.retheviper.file.transporter.constant.SLASH
@@ -18,14 +22,19 @@ import io.ktor.http.encodeURLParameter
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.web.attributes.ATarget
 import org.jetbrains.compose.web.attributes.FormEncType
 import org.jetbrains.compose.web.attributes.FormMethod
+import org.jetbrains.compose.web.attributes.FormTarget
 import org.jetbrains.compose.web.attributes.InputType
 import org.jetbrains.compose.web.attributes.encType
 import org.jetbrains.compose.web.attributes.method
+import org.jetbrains.compose.web.attributes.name
+import org.jetbrains.compose.web.attributes.target
 import org.jetbrains.compose.web.dom.Br
 import org.jetbrains.compose.web.dom.Div
 import org.jetbrains.compose.web.dom.Form
+import org.jetbrains.compose.web.dom.HiddenInput
 import org.jetbrains.compose.web.dom.Input
 import org.jetbrains.compose.web.dom.Text
 
@@ -44,76 +53,90 @@ fun FileBrowser(scope: CoroutineScope) {
         Text("Current: $currentPath")
     }
 
-    Br()
-
-    // Problem: Upload multipart data sends empty file
-    // https://stackoverflow.com/questions/73450329/compose-for-web-uploading-a-file-submitted-via-a-multipart-form
-
-    Form(
-        action = "$API_URL$ENPOINT_UPLOAD",
-        attrs = {
-            method(FormMethod.Post)
-            encType(FormEncType.MultipartFormData)
-        }
-    ) {
-        Input(InputType.File)
-        Input(InputType.Submit)
-    }
-
-    Br()
+    FileUploadForm(currentPath)
 
     if (currentPath.isBlank()) {
         Br()
     } else {
-        Div(
-            {
-                style {
-                    pointerCursor()
-                }
-                onClick {
-                    scope.launch {
-                        currentPath = previousPath(currentPath)
-                        selectedPathItems = listPathItem(currentPath)
-                    }
-                }
+        BackButton {
+            scope.launch {
+                currentPath = previousPath(currentPath)
+                selectedPathItems = listPathItem(currentPath)
             }
-        ) {
-            Text("◀️ Return")
         }
     }
-
 
     selectedPathItems.forEach { pathItem ->
-        Div(
-            {
-                style {
-                    pointerCursor()
-                }
-                onClick {
-                    val targetPath = "${pathItem.path}/${pathItem.name}"
-                    if (pathItem.isDirectory) {
-                        scope.launch {
-                            selectedPathItems = listPathItem(targetPath)
-                            currentPath = targetPath
-                        }
-                    } else {
-                        window.open(
-                            "$API_URL$ENDPOINT_DOWNLOAD?filepath=${targetPath.encodeURLParameter()}",
-                            "_parent"
-                        )
-                    }
-                }
-            }
-        ) {
+        FileItem(pathItem) {
+            val targetPath = "${pathItem.path}/${pathItem.name}"
             if (pathItem.isDirectory) {
-                Text("📁 ${pathItem.name}")
+                scope.launch {
+                    selectedPathItems = listPathItem(targetPath)
+                    currentPath = targetPath
+                }
             } else {
-                val icon = getIconByMimeType(pathItem.mimeType)
-                val size = calculateFileSize(pathItem.size)
-                Text("$icon ${pathItem.name} ($size)")
+                window.open(
+                    url = "$API_URL$ENDPOINT_DOWNLOAD?filepath=${targetPath.encodeURLParameter()}",
+                    target = ATarget.Blank.targetStr
+                )
             }
         }
     }
+}
+
+@Composable
+fun FileUploadForm(currentPath: String) {
+    Div {
+        Form(
+            action = "$API_URL$ENPOINT_UPLOAD",
+            attrs = {
+                method(FormMethod.Post)
+                encType(FormEncType.MultipartFormData)
+                target(FormTarget.Blank)
+            }
+        ) {
+            HiddenInput {
+                name("target")
+                value(currentPath)
+            }
+            Input(InputType.File) { name("file") }
+            Input(InputType.Submit)
+        }
+    }
+}
+
+@Composable
+private fun BackButton(onClick: () -> Unit) {
+    Div(
+        {
+            style { pointerCursor() }
+            onClick { onClick() }
+        }
+    ) {
+        Text("◀️ Return")
+    }
+}
+
+@Composable
+private fun FileItem(pathItem: PathItem, onClick: () -> Unit) {
+    Div(
+        {
+            style { pointerCursor() }
+            onClick { onClick() }
+        }
+    ) {
+        if (pathItem.isDirectory) {
+            Text("📁 ${pathItem.name}")
+        } else {
+            val icon = getIconByMimeType(pathItem.mimeType)
+            val size = calculateFileSize(pathItem.size ?: 0)
+            Text("$icon ${pathItem.name} ($size)")
+        }
+    }
+}
+
+private fun previousPath(path: String): String {
+    return path.substringBeforeLast(SLASH).substringBeforeLast("\\")
 }
 
 fun getIconByMimeType(mimeType: String?): String {
@@ -128,26 +151,18 @@ fun getIconByMimeType(mimeType: String?): String {
     }
 }
 
-private fun previousPath(path: String): String {
-    return path.substringBeforeLast(SLASH).substringBeforeLast("\\")
-}
-
-private fun calculateFileSize(size: Long?): String {
-    val byte = size ?: 0
-    return if (byte < CONTENT_SIZE_UNIT) {
-        "$byte byte"
-    } else {
-        val kb = byte / CONTENT_SIZE_UNIT
-        if (kb < CONTENT_SIZE_UNIT) {
-            "$kb kb"
-        } else {
-            val mb = kb / CONTENT_SIZE_UNIT
-            if (mb < CONTENT_SIZE_UNIT) {
-                "$mb mb"
-            } else {
-                val gb = mb / CONTENT_SIZE_UNIT
-                "$gb gb"
-            }
-        }
+private fun calculateFileSize(size: Long): String {
+    val unit = when {
+        size < CONTENT_SIZE_UNIT_VALUE -> CONTENT_SIZE_UNIT_BYTE
+        size < CONTENT_SIZE_UNIT_VALUE * CONTENT_SIZE_UNIT_VALUE -> CONTENT_SIZE_UNIT_KILOBYTE
+        size < CONTENT_SIZE_UNIT_VALUE * CONTENT_SIZE_UNIT_VALUE * CONTENT_SIZE_UNIT_VALUE -> CONTENT_SIZE_UNIT_MEGABYTE
+        else -> CONTENT_SIZE_UNIT_GIGABYTE
     }
+    val value = when (unit) {
+        CONTENT_SIZE_UNIT_BYTE -> size
+        CONTENT_SIZE_UNIT_KILOBYTE -> size / CONTENT_SIZE_UNIT_VALUE
+        CONTENT_SIZE_UNIT_MEGABYTE -> size / CONTENT_SIZE_UNIT_VALUE / CONTENT_SIZE_UNIT_VALUE
+        else -> size / CONTENT_SIZE_UNIT_VALUE / CONTENT_SIZE_UNIT_VALUE / CONTENT_SIZE_UNIT_VALUE
+    }
+    return "$value $unit"
 }

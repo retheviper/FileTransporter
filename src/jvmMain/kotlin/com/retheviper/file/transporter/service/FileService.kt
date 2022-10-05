@@ -16,22 +16,25 @@ import kotlin.io.path.isHidden
 import kotlin.streams.toList
 
 object FileService {
+
     suspend fun saveFile(multipart: MultiPartData) {
+        var path = Path.of(ROOT_DIRECTORY)
         multipart.forEachPart { part ->
             when (part) {
                 is PartData.FormItem -> {
-                    println("FormItem: ${part.name} = ${part.value}")
+                    if (part.name == "target") {
+                        path = getFullPath(part.value)
+                    }
                 }
 
                 is PartData.FileItem -> {
                     withContext(Dispatchers.IO) {
-                        val file = Files.createTempFile("ktor", ".tmp")
+                        val file = Files.createFile(path.resolve(part.originalFileName!!))
                         part.streamProvider().use { input ->
                             Files.newOutputStream(file).use { output ->
                                 input.copyTo(output)
                             }
                         }
-                        println("FileItem: ${part.originalFileName} = $file")
                     }
                 }
 

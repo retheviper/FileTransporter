@@ -32,14 +32,12 @@ fun Application.configureRouting() {
         }
         static {
             resources(SLASH)
-
         }
 
         route(API_BASE_PATH) {
             post(ENPOINT_UPLOAD) {
                 val multipart = call.receiveMultipart()
                 FileService.saveFile(multipart)
-                call.respondRedirect("/index.html")
             }
 
             get(ENDPOINT_LIST) {
