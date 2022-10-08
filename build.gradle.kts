@@ -19,9 +19,6 @@ repositories {
     mavenCentral()
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
 }
-dependencies {
-    implementation("io.ktor:ktor-server-call-logging-jvm:2.1.2")
-}
 
 kotlin {
     js(IR) {
@@ -97,7 +94,7 @@ application {
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
 
-// include JS artifacts in any JAR we generate
+// include JS artifacts in any JAR when generate
 tasks.getByName<Jar>("jvmJar") {
     val webpackTask = tasks.getByName("jsBrowserProductionWebpack")
     dependsOn(webpackTask) // make sure JS gets compiled first
