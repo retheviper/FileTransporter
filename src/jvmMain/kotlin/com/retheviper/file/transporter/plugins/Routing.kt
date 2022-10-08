@@ -42,7 +42,7 @@ fun Application.configureRouting() {
 
             get(ENDPOINT_LIST) {
                 val target = call.request.queryParameters["target"]?.ifBlank { SLASH } ?: SLASH
-                val tree = FileService.listFileTree(target)
+                val tree = FileService.listPath(target)
                 call.respond(tree)
             }
 

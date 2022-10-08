@@ -5,7 +5,7 @@ const val ENPOINT_UPLOAD = "/upload"
 const val ENDPOINT_DOWNLOAD = "/download"
 const val ENDPOINT_LIST = "/list"
 
-const val ROOT_DIRECTORY = "/Users/"
+const val ROOT_DIRECTORY = "/Users/youngbinkim"
 const val SLASH = "/"
 const val CONTENT_SIZE_UNIT_BYTE = "byte"
 const val CONTENT_SIZE_UNIT_KILOBYTE = "kb"

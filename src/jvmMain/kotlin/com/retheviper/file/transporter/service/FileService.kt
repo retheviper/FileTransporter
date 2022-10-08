@@ -1,5 +1,6 @@
 package com.retheviper.file.transporter.service
 
+import com.retheviper.file.transporter.constant.FileType
 import com.retheviper.file.transporter.constant.ROOT_DIRECTORY
 import com.retheviper.file.transporter.model.PathItem
 import io.ktor.http.content.MultiPartData
@@ -50,13 +51,13 @@ object FileService {
         return Path.of(ROOT_DIRECTORY, path)
     }
 
-    suspend fun listFileTree(target: String): List<PathItem> {
+    suspend fun listPath(target: String): List<PathItem> {
         return withContext(Dispatchers.IO) {
             try {
                 Files.list(getFullPath(target))
                     .toList()
                     .filter { !it.isHidden() }
-                    .map { it.toFileTree() }
+                    .map { it.toPathItem() }
                     .sortedBy { it.name }
                     .sortedBy { it.type }
             } catch (e: Exception) {
@@ -65,11 +66,11 @@ object FileService {
         }
     }
 
-    private fun Path.toFileTree(): PathItem {
+    private fun Path.toPathItem(): PathItem {
         return PathItem(
             name = this.fileName.toString(),
             size = if (this.isDirectory()) null else this.fileSize(),
-            type = if (this.isDirectory()) "directory" else "file",
+            type = if (this.isDirectory()) FileType.DIRECTORY else FileType.FILE,
             mimeType = if (this.isDirectory()) null else Files.probeContentType(this),
             path = this.parent.toString().substringAfter(ROOT_DIRECTORY)
         )
