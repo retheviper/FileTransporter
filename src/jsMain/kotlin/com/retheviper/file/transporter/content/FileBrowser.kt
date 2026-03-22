@@ -8,8 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.retheviper.file.transporter.client.API_URL
-import com.retheviper.file.transporter.constant.ENDPOINT_DOWNLOAD
-import com.retheviper.file.transporter.constant.ENPOINT_UPLOAD
+import com.retheviper.file.transporter.constant.ApiRoutes
 import com.retheviper.file.transporter.model.PathItem
 import com.retheviper.file.transporter.style.pointerCursor
 import com.retheviper.file.transporter.util.FileInfoUtil
@@ -80,7 +79,7 @@ fun FileBrowser() {
                         } else {
                             browserState.download(
                                 item = pathItem,
-                                downloadUrl = "$API_URL$ENDPOINT_DOWNLOAD?filepath=${encodeURIComponent(targetPath)}"
+                                downloadUrl = "$API_URL${ApiRoutes.DOWNLOAD}?filepath=${encodeURIComponent(targetPath)}"
                             )
                         }
                     }
@@ -681,7 +680,7 @@ private suspend fun uploadFile(
     formData.append("file", file, file.name)
     val xhr = XMLHttpRequest()
 
-    xhr.open("POST", "$API_URL$ENPOINT_UPLOAD")
+    xhr.open("POST", "$API_URL${ApiRoutes.UPLOAD}")
     xhr.upload.onprogress = { event ->
         if (event.lengthComputable) {
             val percent = ((event.loaded.toDouble() / event.total.toDouble()) * 100).toInt().coerceIn(0, 100)
