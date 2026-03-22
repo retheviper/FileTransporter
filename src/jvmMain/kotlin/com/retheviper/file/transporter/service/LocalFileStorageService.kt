@@ -10,9 +10,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.io.asSink
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.NotDirectoryException
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import kotlin.io.path.fileSize
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isHidden
@@ -21,57 +23,80 @@ import kotlin.streams.toList
 interface FileStorageService {
     suspend fun saveFile(multipart: MultiPartData): Int
     suspend fun listPath(target: String): List<PathItem>
+    fun prepareDownload(path: String): Path
     fun resolvePath(path: String): Path
 }
 
 class LocalFileStorageService(
     private val rootDirectory: Path
 ) : FileStorageService {
+    private val normalizedRootDirectory = rootDirectory.toAbsolutePath().normalize()
+    private val realRootDirectory = normalizedRootDirectory.toRealPath()
 
     override suspend fun saveFile(multipart: MultiPartData): Int {
-        var path = resolvePath("")
-        var uploadCount = 0
-        var pendingFailure: Exception? = null
+        val pendingUploads = mutableListOf<PendingUpload>()
+        var targetPathValue: String? = null
 
-        multipart.forEachPart { part ->
-            when (part) {
-                is PartData.FormItem -> {
-                    if (part.name == "target") {
-                        pendingFailure = runCatching {
-                            resolvePath(part.value).also(::requireDirectory)
-                        }.onSuccess { validatedPath ->
-                            path = validatedPath
-                        }.exceptionOrNull() as? Exception
-                    }
-                }
-
-                is PartData.FileItem -> {
-                    withContext(Dispatchers.IO) {
-                        val filename = part.originalFileName?.substringAfterLast("/")?.substringAfterLast("\\")
-                        if (pendingFailure == null && !filename.isNullOrBlank()) {
-                            requireDirectory(path)
-                            Files.createDirectories(path)
-                            val file = path.resolve(filename)
-                            Files.newOutputStream(file).use { output ->
-                                part.provider().readTo(output.asSink())
-                            }
-                            uploadCount += 1
+        try {
+            multipart.forEachPart { part ->
+                when (part) {
+                    is PartData.FormItem -> {
+                        if (part.name == "target") {
+                            targetPathValue = part.value
                         }
                     }
+
+                    is PartData.FileItem -> {
+                        withContext(Dispatchers.IO) {
+                            val filename = part.originalFileName?.substringAfterLast("/")?.substringAfterLast("\\")
+                            if (!filename.isNullOrBlank()) {
+                                val temporaryPath = Files.createTempFile("file-transporter-upload-", ".tmp")
+                                Files.newOutputStream(temporaryPath).use { output ->
+                                    part.provider().readTo(output.asSink())
+                                }
+                                pendingUploads += PendingUpload(
+                                    filename = filename,
+                                    temporaryPath = temporaryPath
+                                )
+                            }
+                        }
+                    }
+
+                    else -> Unit
                 }
-
-                else -> Unit
+                part.dispose()
             }
-            part.dispose()
-        }
 
-        pendingFailure?.let { throw it }
-        return uploadCount
+            val destinationDirectory = resolvePath(targetPathValue.orEmpty())
+            requireDirectory(destinationDirectory)
+
+            withContext(Dispatchers.IO) {
+                pendingUploads.forEach { upload ->
+                    Files.move(
+                        upload.temporaryPath,
+                        destinationDirectory.resolve(upload.filename),
+                        StandardCopyOption.REPLACE_EXISTING
+                    )
+                }
+            }
+            return pendingUploads.size
+        } finally {
+            pendingUploads.forEach { upload ->
+                Files.deleteIfExists(upload.temporaryPath)
+            }
+        }
     }
 
     override fun resolvePath(path: String): Path {
-        val candidate = rootDirectory.resolve(path.removePrefix("/")).normalize()
-        require(candidate.startsWith(rootDirectory)) { "Invalid target path" }
+        val candidate = normalizedRootDirectory.resolve(path.removePrefix("/")).normalize()
+        val confinedCandidate = when {
+            Files.exists(candidate, LinkOption.NOFOLLOW_LINKS) -> candidate.toRealPath()
+            else -> {
+                val realParent = candidate.parent?.toRealPath() ?: realRootDirectory
+                realParent.resolve(candidate.fileName ?: Path.of("")).normalize()
+            }
+        }
+        require(confinedCandidate.startsWith(realRootDirectory)) { "Invalid target path" }
         return candidate
     }
 
@@ -87,6 +112,14 @@ class LocalFileStorageService(
                     .sortedWith(compareBy({ it.type }, { it.name.lowercase() }))
             }
         }
+    }
+
+    override fun prepareDownload(path: String): Path {
+        val resolvedPath = resolvePath(path)
+        if (Files.notExists(resolvedPath)) {
+            throw NoSuchFileException(resolvedPath.toString())
+        }
+        return resolvedPath
     }
 
     private fun Path.toPathItem(): PathItem {
@@ -108,4 +141,9 @@ class LocalFileStorageService(
             throw NotDirectoryException(path.toString())
         }
     }
+
+    private data class PendingUpload(
+        val filename: String,
+        val temporaryPath: Path
+    )
 }

@@ -19,6 +19,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
 import io.ktor.utils.io.jvm.javaio.toInputStream
+import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.util.zip.ZipInputStream
 import kotlin.io.path.createDirectories
@@ -164,6 +165,49 @@ class ServerTest {
     }
 
     @Test
+    fun uploadUsesTargetWhenMultipartSendsFileBeforeTarget() = testApplication {
+        val tempRoot = Files.createTempDirectory("file-transporter-upload-out-of-order-test")
+        System.setProperty("file.transporter.root", tempRoot.toString())
+        try {
+            val targetDirectory = tempRoot.resolve("uploads").createDirectories()
+
+            application {
+                configureSerialization()
+                configureRoutingForTest(tempRoot)
+                configureContent()
+            }
+
+            val response = client.post("/api/v1/upload") {
+                setBody(
+                    MultiPartFormDataContent(
+                        formData {
+                            append(
+                                key = "file",
+                                value = "new content".toByteArray(),
+                                headers = io.ktor.http.Headers.build {
+                                    append(
+                                        HttpHeaders.ContentDisposition,
+                                        """form-data; name="file"; filename="hello.txt""""
+                                    )
+                                    append(HttpHeaders.ContentType, ContentType.Text.Plain.toString())
+                                }
+                            )
+                            append("target", "/uploads")
+                        }
+                    )
+                )
+            }
+
+            assertEquals(HttpStatusCode.Created, response.status)
+            assertEquals("new content", targetDirectory.resolve("hello.txt").readText())
+            assertEquals(false, tempRoot.resolve("hello.txt").toFile().exists())
+        } finally {
+            System.clearProperty("file.transporter.root")
+            tempRoot.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun downloadReturnsNotFoundForMissingFile() = testApplication {
         val tempRoot = Files.createTempDirectory("file-transporter-download-test")
         System.setProperty("file.transporter.root", tempRoot.toString())
@@ -200,6 +244,38 @@ class ServerTest {
         } finally {
             System.clearProperty("file.transporter.root")
             tempRoot.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun downloadRejectsSymlinkPathThatEscapesRoot() = testApplication {
+        val tempRoot = Files.createTempDirectory("file-transporter-download-symlink-test")
+        val outsideDirectory = Files.createTempDirectory("file-transporter-download-symlink-outside")
+        System.setProperty("file.transporter.root", tempRoot.toString())
+        try {
+            val linkedDirectory = tempRoot.resolve("linked")
+            try {
+                Files.createSymbolicLink(linkedDirectory, outsideDirectory)
+            } catch (_: UnsupportedOperationException) {
+                return@testApplication
+            } catch (_: FileSystemException) {
+                return@testApplication
+            }
+            outsideDirectory.resolve("secret.txt").writeText("secret")
+
+            application {
+                configureSerialization()
+                configureRoutingForTest(tempRoot)
+            }
+
+            val response = client.get("/api/v1/download?filepath=/linked/secret.txt")
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+            assertEquals("Invalid target path", response.bodyAsText())
+        } finally {
+            System.clearProperty("file.transporter.root")
+            tempRoot.toFile().deleteRecursively()
+            outsideDirectory.toFile().deleteRecursively()
         }
     }
 

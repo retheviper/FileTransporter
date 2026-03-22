@@ -7,6 +7,7 @@ import io.ktor.http.content.MultiPartData
 import io.ktor.http.content.PartData
 import io.ktor.utils.io.ByteReadChannel
 import java.nio.file.Files
+import java.nio.file.FileSystemException
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.readText
@@ -110,6 +111,57 @@ class LocalFileStorageServiceTest {
             assertEquals("root content", tempRoot.resolve("root.txt").readText())
         } finally {
             tempRoot.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun saveFileUsesTargetEvenWhenFilePartComesFirst() {
+        val tempRoot = Files.createTempDirectory("file-transporter-service-out-of-order-target")
+        try {
+            val service = LocalFileStorageService(tempRoot)
+            val target = tempRoot.resolve("uploads").createDirectories()
+
+            val uploaded = runBlocking {
+                service.saveFile(
+                    TestMultiPartData(
+                        listOf(
+                            fileItem("hello.txt", "hello"),
+                            formItem("target", "/uploads")
+                        )
+                    )
+                )
+            }
+
+            assertEquals(1, uploaded)
+            assertEquals("hello", target.resolve("hello.txt").readText())
+            assertEquals(false, tempRoot.resolve("hello.txt").exists())
+        } finally {
+            tempRoot.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun resolvePathRejectsSymlinkThatEscapesRoot() {
+        val tempRoot = Files.createTempDirectory("file-transporter-service-symlink-root")
+        val outsideDirectory = Files.createTempDirectory("file-transporter-service-symlink-outside")
+        try {
+            val linkedDirectory = tempRoot.resolve("linked")
+            try {
+                Files.createSymbolicLink(linkedDirectory, outsideDirectory)
+            } catch (_: UnsupportedOperationException) {
+                return
+            } catch (_: FileSystemException) {
+                return
+            }
+
+            val service = LocalFileStorageService(tempRoot)
+
+            assertFailsWith<IllegalArgumentException> {
+                service.resolvePath("/linked/file.txt")
+            }
+        } finally {
+            tempRoot.toFile().deleteRecursively()
+            outsideDirectory.toFile().deleteRecursively()
         }
     }
 }

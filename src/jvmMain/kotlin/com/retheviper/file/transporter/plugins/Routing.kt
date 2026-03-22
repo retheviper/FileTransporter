@@ -15,7 +15,6 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
-import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.NotDirectoryException
 
@@ -72,14 +71,12 @@ fun Application.configureRouting(
             get(ApiRoutes.DOWNLOAD) {
                 try {
                     val filepath = call.request.queryParameters["filepath"] ?: ""
-                    val path = fileStorageService.resolvePath(filepath)
-                    if (Files.notExists(path)) {
-                        call.respond(HttpStatusCode.NotFound, "File not found.")
-                    } else {
-                        call.respondDownload(path)
-                    }
+                    val path = fileStorageService.prepareDownload(filepath)
+                    call.respondDownload(path)
                 } catch (e: IllegalArgumentException) {
                     call.respond(HttpStatusCode.BadRequest, e.message ?: "Invalid file path.")
+                } catch (e: NoSuchFileException) {
+                    call.respond(HttpStatusCode.NotFound, "File not found.")
                 } catch (e: Exception) {
                     call.application.environment.log.error("Failed to download file.", e)
                     call.respond(HttpStatusCode.InternalServerError, "Unable to download file.")
