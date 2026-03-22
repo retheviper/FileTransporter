@@ -10,6 +10,8 @@ import com.retheviper.file.transporter.client.listPathItem
 import com.retheviper.file.transporter.model.PathItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import com.retheviper.file.transporter.content.readPathFromHash as browserLocationReadPathFromHash
+import com.retheviper.file.transporter.content.writePathToHash as browserLocationWritePathToHash
 
 @Composable
 fun rememberFileBrowserState(): FileBrowserState {
@@ -31,9 +33,9 @@ interface FileBrowserStateDependencies {
 object DefaultFileBrowserStateDependencies : FileBrowserStateDependencies {
     override suspend fun listPathItems(path: String): List<PathItem> = listPathItem(path)
 
-    override fun readPathFromHash(): String = com.retheviper.file.transporter.content.readPathFromHash()
+    override fun readPathFromHash(): String = browserLocationReadPathFromHash()
 
-    override fun writePathToHash(path: String) = com.retheviper.file.transporter.content.writePathToHash(path)
+    override fun writePathToHash(path: String) = browserLocationWritePathToHash(path)
 
     override fun openDownload(url: String) {
         kotlinx.browser.window.open(url, "_blank")
@@ -42,7 +44,8 @@ object DefaultFileBrowserStateDependencies : FileBrowserStateDependencies {
 
 class FileBrowserState(
     private val scope: CoroutineScope,
-    private val dependencies: FileBrowserStateDependencies = DefaultFileBrowserStateDependencies
+    private val dependencies: FileBrowserStateDependencies = DefaultFileBrowserStateDependencies,
+    private val transferState: FileTransferState = FileTransferState()
 ) {
     var currentPath by mutableStateOf(dependencies.readPathFromHash())
         private set
@@ -53,17 +56,17 @@ class FileBrowserState(
     var pathItems by mutableStateOf(emptyList<PathItem>())
         private set
 
-    var uploadError by mutableStateOf<String?>(null)
-        private set
+    val uploadError: String?
+        get() = transferState.uploadError
 
     var browserError by mutableStateOf<String?>(null)
         private set
 
-    var uploadProgress by mutableStateOf<Int?>(null)
-        private set
+    val uploadProgress: Int?
+        get() = transferState.uploadProgress
 
-    var transferHistory by mutableStateOf(emptyList<TransferHistoryEntry>())
-        private set
+    val transferHistory: List<TransferHistoryEntry>
+        get() = transferState.transferHistory
 
     suspend fun refresh() {
         isLoading = true
@@ -91,75 +94,27 @@ class FileBrowserState(
     }
 
     fun download(item: PathItem, downloadUrl: String) {
-        transferHistory = prependHistory(
-            transferHistory,
-            TransferHistoryEntry(
-                type = "Download",
-                fileName = item.name,
-                location = formatDisplayPath(currentPath),
-                detail = if (item.isDirectory) "ZIP archive" else item.size?.let { formatFileSize(it) } ?: "Ready",
-                state = "Completed"
-            )
-        )
+        transferState.recordDownload(item, currentPath)
         dependencies.openDownload(downloadUrl)
     }
 
     fun startUpload(fileName: String) {
-        uploadError = null
-        uploadProgress = 0
-        transferHistory = prependHistory(
-            transferHistory,
-            TransferHistoryEntry(
-                type = "Upload",
-                fileName = fileName,
-                location = formatDisplayPath(currentPath),
-                detail = "Preparing transfer",
-                state = "Running"
-            )
-        )
+        transferState.startUpload(fileName, currentPath)
     }
 
     fun updateUploadProgress(fileName: String, percent: Int) {
-        uploadProgress = percent
-        transferHistory = updateLatestHistory(
-            history = transferHistory,
-            type = "Upload",
-            fileName = fileName,
-            location = formatDisplayPath(currentPath),
-            state = "Running",
-            detail = "$percent% uploaded"
-        )
+        transferState.updateUploadProgress(fileName, percent, currentPath)
     }
 
     fun finishUpload(fileName: String) {
-        uploadProgress = 100
         browserError = null
-        transferHistory = updateLatestHistory(
-            history = transferHistory,
-            type = "Upload",
-            fileName = fileName,
-            location = formatDisplayPath(currentPath),
-            state = "Completed",
-            detail = "Upload complete"
-        )
+        transferState.finishUpload(fileName, currentPath)
         scope.launch {
             refresh()
         }
     }
 
     fun failUpload(fileName: String, message: String) {
-        uploadProgress = null
-        uploadError = message
-        transferHistory = updateLatestHistory(
-            history = transferHistory,
-            type = "Upload",
-            fileName = fileName,
-            location = formatDisplayPath(currentPath),
-            state = "Failed",
-            detail = message
-        )
+        transferState.failUpload(fileName, message, currentPath)
     }
 }
-
-private fun formatFileSize(size: Long): String =
-    com.retheviper.file.transporter.util.FileInfoUtil.formatFileSizeWithUnit(size)

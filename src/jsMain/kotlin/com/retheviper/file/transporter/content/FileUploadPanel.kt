@@ -6,13 +6,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import com.retheviper.file.transporter.client.API_URL
-import com.retheviper.file.transporter.constant.ApiRoutes
+import com.retheviper.file.transporter.client.FileUploadClient
+import com.retheviper.file.transporter.client.XmlHttpFileUploadClient
 import com.retheviper.file.transporter.style.AppTheme
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 import org.jetbrains.compose.web.attributes.InputType
 import org.jetbrains.compose.web.attributes.disabled
 import org.jetbrains.compose.web.attributes.name
@@ -24,8 +21,6 @@ import org.jetbrains.compose.web.dom.Text
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.asList
 import org.w3c.files.File
-import org.w3c.xhr.FormData
-import org.w3c.xhr.XMLHttpRequest
 
 @Composable
 internal fun FileUploadForm(
@@ -35,7 +30,8 @@ internal fun FileUploadForm(
     onUploadStarted: (String) -> Unit,
     onUploadProgress: (String, Int) -> Unit,
     onUploadFinished: (String) -> Unit,
-    onUploadFailed: (String, String) -> Unit
+    onUploadFailed: (String, String) -> Unit,
+    uploadClient: FileUploadClient = XmlHttpFileUploadClient
 ) {
     val scope = rememberCoroutineScope()
     var fileInput by remember { mutableStateOf<HTMLInputElement?>(null) }
@@ -51,7 +47,7 @@ internal fun FileUploadForm(
             isUploading = true
             onUploadStarted(selectedFile.name)
             try {
-                uploadFile(
+                uploadClient.uploadFile(
                     file = selectedFile,
                     currentPath = currentPath,
                     onProgress = { percent ->
@@ -213,40 +209,4 @@ private fun UploadProgress(theme: AppTheme, progress: Int) {
             })
         }
     }
-}
-
-private suspend fun uploadFile(
-    file: File,
-    currentPath: String,
-    onProgress: (Int) -> Unit
-) = suspendCancellableCoroutine<Unit> { continuation ->
-    val formData = FormData()
-    formData.append("target", currentPath)
-    formData.append("file", file, file.name)
-    val xhr = XMLHttpRequest()
-
-    xhr.open("POST", "$API_URL${ApiRoutes.UPLOAD}")
-    xhr.upload.onprogress = { event ->
-        if (event.lengthComputable) {
-            val percent = ((event.loaded.toDouble() / event.total.toDouble()) * 100).toInt().coerceIn(0, 100)
-            onProgress(percent)
-        }
-    }
-    xhr.onload = {
-        if (xhr.status.toInt() in 200..299) {
-            onProgress(100)
-            continuation.resume(Unit)
-        } else {
-            continuation.resumeWithException(
-                IllegalStateException("Upload failed with status ${xhr.status.toInt()}.")
-            )
-        }
-    }
-    xhr.onerror = {
-        continuation.resumeWithException(IllegalStateException("File upload failed."))
-    }
-    continuation.invokeOnCancellation {
-        xhr.abort()
-    }
-    xhr.send(formData)
 }
