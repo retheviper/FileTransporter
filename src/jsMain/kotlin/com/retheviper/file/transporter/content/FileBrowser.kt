@@ -683,7 +683,8 @@ private fun BrowserPanel(
                     property("color", "rgba(148, 163, 184, 0.82)")
                 }
             }) {
-                Text(formatDisplayPath(currentPath))
+                val itemCount = selectedPathItems.size
+                Text("$itemCount item" + if (itemCount == 1) "" else "s")
             }
         }
 
