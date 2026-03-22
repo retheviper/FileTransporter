@@ -10,13 +10,16 @@ import io.ktor.client.request.forms.formData
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
+import io.ktor.utils.io.jvm.javaio.toInputStream
 import java.nio.file.Files
+import java.util.zip.ZipInputStream
 import kotlin.io.path.createDirectories
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
@@ -173,6 +176,44 @@ class ServerTest {
 
             assertEquals(HttpStatusCode.NotFound, response.status)
             assertEquals("File not found.", response.bodyAsText())
+        } finally {
+            System.clearProperty("file.transporter.root")
+            tempRoot.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun downloadReturnsZipForDirectory() = testApplication {
+        val tempRoot = Files.createTempDirectory("file-transporter-download-directory-test")
+        System.setProperty("file.transporter.root", tempRoot.toString())
+        try {
+            val targetDirectory = tempRoot.resolve("folder").createDirectories()
+            targetDirectory.resolve("hello.txt").writeText("content")
+            targetDirectory.resolve("nested").createDirectories().resolve("child.txt").writeText("nested content")
+
+            application {
+                configureSerialization()
+                configureRoutingForTest(tempRoot)
+            }
+
+            val response = client.get("/api/v1/download?filepath=/folder")
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals("attachment; filename=folder.zip", response.headers[HttpHeaders.ContentDisposition])
+
+            val entries = mutableMapOf<String, String>()
+            ZipInputStream(response.bodyAsChannel().toInputStream()).use { zip ->
+                var entry = zip.nextEntry
+                while (entry != null) {
+                    if (!entry.isDirectory) {
+                        entries[entry.name] = zip.readBytes().decodeToString()
+                    }
+                    entry = zip.nextEntry
+                }
+            }
+
+            assertEquals("content", entries["hello.txt"])
+            assertEquals("nested content", entries["nested/child.txt"])
         } finally {
             System.clearProperty("file.transporter.root")
             tempRoot.toFile().deleteRecursively()

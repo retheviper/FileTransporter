@@ -4,6 +4,7 @@ import com.retheviper.file.transporter.constant.ApiRoutes
 import com.retheviper.file.transporter.constant.ROOT_PATH
 import com.retheviper.file.transporter.service.FileStorageService
 import io.ktor.http.ContentDisposition
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.encodeURLPath
@@ -15,6 +16,7 @@ import io.ktor.server.request.receiveMultipart
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondFile
+import io.ktor.server.response.respondOutputStream
 import io.ktor.server.response.respondRedirect
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -23,6 +25,9 @@ import io.ktor.server.routing.routing
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.NotDirectoryException
+import java.nio.file.Path
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 fun Application.configureRouting(
     fileStorageService: FileStorageService,
@@ -80,6 +85,20 @@ fun Application.configureRouting(
                     val path = fileStorageService.resolvePath(filepath)
                     if (Files.notExists(path)) {
                         call.respond(HttpStatusCode.NotFound, "File not found.")
+                    } else if (Files.isDirectory(path)) {
+                        val archiveName = "${path.fileName?.toString().orEmpty().ifBlank { "archive" }}.zip"
+                        call.response.header(
+                            name = HttpHeaders.ContentDisposition,
+                            value = ContentDisposition.Attachment.withParameter(
+                                key = ContentDisposition.Parameters.FileName,
+                                value = archiveName.encodeURLPath()
+                            ).toString()
+                        )
+                        call.respondOutputStream(ContentType.Application.Zip) {
+                            ZipOutputStream(this).use { zip ->
+                                path.writeDirectoryToZip(zip)
+                            }
+                        }
                     } else {
                         call.response.header(
                             name = HttpHeaders.ContentDisposition,
@@ -103,4 +122,24 @@ fun Application.configureRouting(
 
 private fun Throwable.isMultipartLimitError(): Boolean {
     return message?.contains("exceeded while searching for", ignoreCase = true) == true
+}
+
+private fun Path.writeDirectoryToZip(zip: ZipOutputStream) {
+    Files.walk(this).use { stream ->
+        stream.sorted().forEach { currentPath ->
+            val entryName = relativize(currentPath).toString().replace("\\", "/")
+            if (entryName.isBlank()) return@forEach
+
+            if (Files.isDirectory(currentPath)) {
+                zip.putNextEntry(ZipEntry("$entryName/"))
+                zip.closeEntry()
+            } else {
+                zip.putNextEntry(ZipEntry(entryName))
+                Files.newInputStream(currentPath).use { input ->
+                    input.copyTo(zip)
+                }
+                zip.closeEntry()
+            }
+        }
+    }
 }
