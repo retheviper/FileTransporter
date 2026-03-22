@@ -1,20 +1,42 @@
 package com.retheviper.file.transporter
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.retheviper.file.transporter.content.FileBrowser
+import com.retheviper.file.transporter.style.darkAppTheme
+import com.retheviper.file.transporter.style.lightAppTheme
+import kotlinx.browser.localStorage
 import org.jetbrains.compose.web.dom.Div
 import org.jetbrains.compose.web.renderComposable
 
 fun main() {
     renderComposable(rootElementId = "root") {
+        var isDarkMode by remember {
+            mutableStateOf(localStorage.getItem(THEME_STORAGE_KEY) == "dark")
+        }
+        val theme = if (isDarkMode) darkAppTheme() else lightAppTheme()
+
         Div({
             style {
                 property("min-height", "100vh")
-                property("background", "radial-gradient(circle at top left, rgba(20, 184, 166, 0.18), transparent 32%), radial-gradient(circle at top right, rgba(59, 130, 246, 0.16), transparent 28%), linear-gradient(180deg, #09111f 0%, #050811 100%)")
-                property("color", "#f4f7fb")
+                property("background", theme.rootBackground)
+                property("color", theme.rootColor)
                 property("font-family", "'Space Grotesk', 'Inter', 'Segoe UI', sans-serif")
+                property("transition", "background 220ms ease, color 220ms ease")
             }
         }) {
-            FileBrowser()
+            FileBrowser(
+                theme = theme,
+                onThemeToggle = {
+                    val nextValue = !isDarkMode
+                    isDarkMode = nextValue
+                    localStorage.setItem(THEME_STORAGE_KEY, if (nextValue) "dark" else "light")
+                }
+            )
         }
     }
 }
+
+private const val THEME_STORAGE_KEY = "file-transporter-theme"
