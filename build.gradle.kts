@@ -13,6 +13,9 @@ version = "0.0.1"
 kotlin {
     js {
         browser {
+            webpackTask {
+                sourceMaps = false
+            }
             testTask {
                 testLogging.showStandardStreams = true
                 useKarma {
@@ -74,7 +77,7 @@ tasks {
         val webpackTask = named("jsBrowserProductionWebpack")
         dependsOn(webpackTask)
         from(layout.buildDirectory.dir("kotlin-webpack/js/productionExecutable")) {
-            include("**/*.js", "**/*.js.map")
+            include("**/*.js")
         }
     }
 

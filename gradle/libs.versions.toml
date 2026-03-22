@@ -22,6 +22,7 @@ ktor-serialization-kotlinx-json-jvm = { module = "io.ktor:ktor-serialization-kot
 ktor-server-auth-jvm = { module = "io.ktor:ktor-server-auth-jvm", version.ref = "ktor" }
 ktor-server-auto-head-response-jvm = { module = "io.ktor:ktor-server-auto-head-response-jvm", version.ref = "ktor" }
 ktor-server-call-logging-jvm = { module = "io.ktor:ktor-server-call-logging-jvm", version.ref = "ktor" }
+ktor-server-compression-jvm = { module = "io.ktor:ktor-server-compression-jvm", version.ref = "ktor" }
 ktor-server-content-negotiation-jvm = { module = "io.ktor:ktor-server-content-negotiation-jvm", version.ref = "ktor" }
 ktor-server-core-jvm = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
 ktor-server-host-common-jvm = { module = "io.ktor:ktor-server-host-common-jvm", version.ref = "ktor" }
@@ -45,6 +46,7 @@ ktor-server = [
   "ktor-server-auto-head-response-jvm",
   "ktor-network-tls-certificates-jvm",
   "ktor-server-call-logging-jvm",
+  "ktor-server-compression-jvm",
 ]
 
 [plugins]
