@@ -1,0 +1,5 @@
+storage:
+  rootDirectory: "."
+
+upload:
+  maxFileSizeBytes: 1073741824

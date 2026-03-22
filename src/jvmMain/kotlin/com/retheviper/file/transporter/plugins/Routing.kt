@@ -1,10 +1,10 @@
 package com.retheviper.file.transporter.plugins
 
+import com.retheviper.file.transporter.config.AppConfig
 import com.retheviper.file.transporter.constant.API_BASE_PATH
 import com.retheviper.file.transporter.constant.ENDPOINT_DOWNLOAD
 import com.retheviper.file.transporter.constant.ENDPOINT_LIST
 import com.retheviper.file.transporter.constant.ENPOINT_UPLOAD
-import com.retheviper.file.transporter.constant.MULTIPART_FORM_FIELD_LIMIT_BYTES
 import com.retheviper.file.transporter.constant.SLASH
 import com.retheviper.file.transporter.service.FileService
 import io.ktor.http.ContentDisposition
@@ -36,7 +36,9 @@ fun Application.configureRouting() {
         route(API_BASE_PATH) {
             post(ENPOINT_UPLOAD) {
                 try {
-                    val multipart = call.receiveMultipart(formFieldLimit = MULTIPART_FORM_FIELD_LIMIT_BYTES)
+                    val multipart = call.receiveMultipart(
+                        formFieldLimit = AppConfig.settings().maxUploadFileSizeBytes
+                    )
                     val uploadCount = FileService.saveFile(multipart)
                     call.respond(HttpStatusCode.Created, mapOf("uploaded" to uploadCount))
                 } catch (e: IllegalArgumentException) {

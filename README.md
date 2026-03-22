@@ -12,6 +12,8 @@ A simple file transfer service by Full Stack of Kotlin.
 
 ## How to run
 
+Edit `config/application.yaml` first if you want to change the shared root folder or upload size limit.
+
 Run the following command:
 
 ```bash
@@ -20,9 +22,32 @@ Run the following command:
 
 Then, you can access to http://localhost:8080 or http://0.0.0.0:8080.
 
-## Change the base path
+## Configuration
 
-change the `ROOT_DIRECTORY`'s value in `commonMain/kotlin/com/retheviper/file/transporter/constant/Constants.kt`.
+The server reads its external YAML config from `config/application.yaml` by default.
+
+```yaml
+storage:
+  rootDirectory: "."
+
+upload:
+  maxFileSizeBytes: 1073741824
+```
+
+- `storage.rootDirectory`: base directory exposed by the file browser
+- `upload.maxFileSizeBytes`: maximum allowed upload size in bytes
+
+You can also point to a different config file:
+
+```bash
+./gradlew run -Dfile.transporter.config=/absolute/path/to/application.yaml
+```
+
+For temporary overrides, these system properties are also supported:
+
+```bash
+./gradlew run -Dfile.transporter.root=/absolute/path -Dfile.transporter.upload.maxFileSizeBytes=52428800
+```
 
 ## References
 

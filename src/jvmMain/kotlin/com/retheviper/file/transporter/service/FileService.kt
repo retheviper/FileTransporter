@@ -1,7 +1,7 @@
 package com.retheviper.file.transporter.service
 
 import com.retheviper.file.transporter.constant.FileType
-import com.retheviper.file.transporter.constant.ROOT_DIRECTORY
+import com.retheviper.file.transporter.config.AppConfig
 import com.retheviper.file.transporter.model.PathItem
 import io.ktor.http.content.MultiPartData
 import io.ktor.http.content.PartData
@@ -62,7 +62,7 @@ object FileService {
     }
 
     private fun rootDirectory(): Path {
-        return Path.of(System.getProperty("file.transporter.root", ROOT_DIRECTORY)).toAbsolutePath().normalize()
+        return AppConfig.settings().rootDirectory
     }
 
     suspend fun listPath(target: String): List<PathItem> {

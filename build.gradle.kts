@@ -77,6 +77,7 @@ kotlin {
                 implementation("io.ktor:ktor-server-call-logging-jvm:$ktor_version")
                 implementation("ch.qos.logback:logback-classic:$logback_version")
                 implementation("org.jetbrains.compose.runtime:runtime:$compose_version")
+                implementation("org.yaml:snakeyaml:2.4")
             }
         }
         val jvmTest by getting {
