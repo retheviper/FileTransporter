@@ -1,8 +1,10 @@
 package com.retheviper
 
+import com.retheviper.file.transporter.config.AppSettings
 import com.retheviper.file.transporter.plugins.configureContent
 import com.retheviper.file.transporter.plugins.configureRouting
 import com.retheviper.file.transporter.plugins.configureSerialization
+import com.retheviper.file.transporter.service.LocalFileStorageService
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.get
@@ -34,7 +36,7 @@ class ServerTest {
 
             application {
                 configureSerialization()
-                configureRouting()
+                configureRoutingForTest(tempRoot)
                 configureContent()
             }
 
@@ -78,7 +80,7 @@ class ServerTest {
 
             application {
                 configureSerialization()
-                configureRouting()
+                configureRoutingForTest(tempRoot)
             }
 
             val response = client.get("/api/v1/list?target=/uploads") {
@@ -100,7 +102,7 @@ class ServerTest {
         try {
             application {
                 configureSerialization()
-                configureRouting()
+                configureRoutingForTest(tempRoot)
             }
 
             val response = client.get("/api/v1/list?target=../../outside") {
@@ -124,7 +126,7 @@ class ServerTest {
 
             application {
                 configureSerialization()
-                configureRouting()
+                configureRoutingForTest(tempRoot)
                 configureContent()
             }
 
@@ -164,7 +166,7 @@ class ServerTest {
         try {
             application {
                 configureSerialization()
-                configureRouting()
+                configureRoutingForTest(tempRoot)
             }
 
             val response = client.get("/api/v1/download?filepath=/missing.txt")
@@ -176,4 +178,15 @@ class ServerTest {
             tempRoot.toFile().deleteRecursively()
         }
     }
+}
+
+private fun io.ktor.server.application.Application.configureRoutingForTest(rootDirectory: java.nio.file.Path) {
+    val settings = AppSettings(
+        rootDirectory = rootDirectory,
+        maxUploadFileSizeBytes = 1024L * 1024L
+    )
+    configureRouting(
+        fileStorageService = LocalFileStorageService(settings.rootDirectory),
+        maxUploadFileSizeBytes = settings.maxUploadFileSizeBytes
+    )
 }

@@ -1,7 +1,6 @@
 package com.retheviper.file.transporter.service
 
 import com.retheviper.file.transporter.constant.FileType
-import com.retheviper.file.transporter.config.AppConfig
 import com.retheviper.file.transporter.model.PathItem
 import io.ktor.http.content.MultiPartData
 import io.ktor.http.content.PartData
@@ -19,18 +18,27 @@ import kotlin.io.path.isDirectory
 import kotlin.io.path.isHidden
 import kotlin.streams.toList
 
-object FileService {
+interface FileStorageService {
+    suspend fun saveFile(multipart: MultiPartData): Int
+    suspend fun listPath(target: String): List<PathItem>
+    fun resolvePath(path: String): Path
+}
 
-    suspend fun saveFile(multipart: MultiPartData): Int {
-        var path = getFullPath("")
+class LocalFileStorageService(
+    private val rootDirectory: Path
+) : FileStorageService {
+
+    override suspend fun saveFile(multipart: MultiPartData): Int {
+        var path = resolvePath("")
         var uploadCount = 0
         var pendingFailure: Exception? = null
+
         multipart.forEachPart { part ->
             when (part) {
                 is PartData.FormItem -> {
                     if (part.name == "target") {
                         pendingFailure = runCatching {
-                            getFullPath(part.value).also(::requireDirectory)
+                            resolvePath(part.value).also(::requireDirectory)
                         }.onSuccess { validatedPath ->
                             path = validatedPath
                         }.exceptionOrNull() as? Exception
@@ -52,30 +60,24 @@ object FileService {
                     }
                 }
 
-                else -> {
-                    println("Unknown part: $part")
-                }
+                else -> Unit
             }
             part.dispose()
         }
+
         pendingFailure?.let { throw it }
         return uploadCount
     }
 
-    fun getFullPath(path: String): Path {
-        val root = rootDirectory()
-        val candidate = root.resolve(path.removePrefix("/")).normalize()
-        require(candidate.startsWith(root)) { "Invalid target path" }
+    override fun resolvePath(path: String): Path {
+        val candidate = rootDirectory.resolve(path.removePrefix("/")).normalize()
+        require(candidate.startsWith(rootDirectory)) { "Invalid target path" }
         return candidate
     }
 
-    private fun rootDirectory(): Path {
-        return AppConfig.settings().rootDirectory
-    }
-
-    suspend fun listPath(target: String): List<PathItem> {
+    override suspend fun listPath(target: String): List<PathItem> {
         return withContext(Dispatchers.IO) {
-            val directory = getFullPath(target)
+            val directory = resolvePath(target)
             requireDirectory(directory)
             Files.list(directory).use { stream ->
                 stream
@@ -88,12 +90,13 @@ object FileService {
     }
 
     private fun Path.toPathItem(): PathItem {
+        val parentPath = parent?.toString()?.substringAfter(rootDirectory.toString()).orEmpty()
         return PathItem(
-            name = this.fileName.toString(),
-            size = if (this.isDirectory()) null else this.fileSize(),
-            type = if (this.isDirectory()) FileType.DIRECTORY else FileType.FILE,
-            mimeType = if (this.isDirectory()) null else Files.probeContentType(this),
-            path = this.parent.toString().substringAfter(rootDirectory().toString())
+            name = fileName.toString(),
+            size = if (isDirectory()) null else fileSize(),
+            type = if (isDirectory()) FileType.DIRECTORY else FileType.FILE,
+            mimeType = if (isDirectory()) null else Files.probeContentType(this),
+            path = parentPath
         )
     }
 

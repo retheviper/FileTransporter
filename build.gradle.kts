@@ -5,6 +5,7 @@ val ktor_version: String by project
 val logback_version: String by project
 val serialization_version: String by project
 val compose_version: String by project
+val koin_version = "3.5.6"
 
 plugins {
     kotlin("plugin.compose")
@@ -73,6 +74,7 @@ kotlin {
                 implementation("io.ktor:ktor-server-call-logging-jvm:$ktor_version")
                 implementation("ch.qos.logback:logback-classic:$logback_version")
                 implementation("org.jetbrains.compose.runtime:runtime:$compose_version")
+                implementation("io.insert-koin:koin-core:$koin_version")
                 implementation("org.yaml:snakeyaml:2.4")
             }
         }

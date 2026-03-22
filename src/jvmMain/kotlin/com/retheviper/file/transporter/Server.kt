@@ -1,9 +1,13 @@
 package com.retheviper.file.transporter
 
+import com.retheviper.file.transporter.config.AppConfig
+import com.retheviper.file.transporter.config.AppSettings
+import com.retheviper.file.transporter.di.applicationModule
 import com.retheviper.file.transporter.plugins.configureContent
 import com.retheviper.file.transporter.plugins.configureLogging
 import com.retheviper.file.transporter.plugins.configureRouting
 import com.retheviper.file.transporter.plugins.configureSerialization
+import com.retheviper.file.transporter.service.FileStorageService
 import io.ktor.network.tls.certificates.buildKeyStore
 import io.ktor.network.tls.certificates.saveToFile
 import io.ktor.server.application.Application
@@ -13,6 +17,8 @@ import io.ktor.server.engine.connector
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.engine.sslConnector
 import io.ktor.server.netty.Netty
+import org.koin.core.context.stopKoin
+import org.koin.core.context.startKoin
 import org.slf4j.LoggerFactory
 import java.io.File
 
@@ -30,9 +36,19 @@ fun main() {
 }
 
 fun Application.module() {
+    stopKoin()
+    val koin = startKoin {
+        modules(applicationModule())
+    }.koin
+    val settings = koin.get<AppSettings>()
+    val fileStorageService = koin.get<FileStorageService>()
+
     configureLogging()
     configureSerialization()
-    configureRouting()
+    configureRouting(
+        fileStorageService = fileStorageService,
+        maxUploadFileSizeBytes = settings.maxUploadFileSizeBytes
+    )
     configureContent()
 }
 

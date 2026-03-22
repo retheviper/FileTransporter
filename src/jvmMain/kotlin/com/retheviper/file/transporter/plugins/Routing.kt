@@ -1,12 +1,8 @@
 package com.retheviper.file.transporter.plugins
 
-import com.retheviper.file.transporter.config.AppConfig
-import com.retheviper.file.transporter.constant.API_BASE_PATH
-import com.retheviper.file.transporter.constant.ENDPOINT_DOWNLOAD
-import com.retheviper.file.transporter.constant.ENDPOINT_LIST
-import com.retheviper.file.transporter.constant.ENPOINT_UPLOAD
-import com.retheviper.file.transporter.constant.SLASH
-import com.retheviper.file.transporter.service.FileService
+import com.retheviper.file.transporter.constant.ApiRoutes
+import com.retheviper.file.transporter.constant.ROOT_PATH
+import com.retheviper.file.transporter.service.FileStorageService
 import io.ktor.http.ContentDisposition
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -28,20 +24,23 @@ import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.NotDirectoryException
 
-fun Application.configureRouting() {
+fun Application.configureRouting(
+    fileStorageService: FileStorageService,
+    maxUploadFileSizeBytes: Long
+) {
     routing {
         get {
             call.respondRedirect("/index.html")
         }
-        staticResources(remotePath = SLASH, basePackage = SLASH)
+        staticResources(remotePath = ROOT_PATH, basePackage = ROOT_PATH)
 
-        route(API_BASE_PATH) {
-            post(ENPOINT_UPLOAD) {
+        route(ApiRoutes.BASE_PATH) {
+            post(ApiRoutes.UPLOAD) {
                 try {
                     val multipart = call.receiveMultipart(
-                        formFieldLimit = AppConfig.settings().maxUploadFileSizeBytes
+                        formFieldLimit = maxUploadFileSizeBytes
                     )
-                    val uploadCount = FileService.saveFile(multipart)
+                    val uploadCount = fileStorageService.saveFile(multipart)
                     call.respond(HttpStatusCode.Created, mapOf("uploaded" to uploadCount))
                 } catch (e: IllegalArgumentException) {
                     throw BadRequestException(e.message ?: "Invalid upload request", e)
@@ -61,10 +60,10 @@ fun Application.configureRouting() {
                 }
             }
 
-            get(ENDPOINT_LIST) {
-                val target = call.request.queryParameters["target"]?.ifBlank { SLASH } ?: SLASH
+            get(ApiRoutes.LIST) {
+                val target = call.request.queryParameters["target"]?.ifBlank { ROOT_PATH } ?: ROOT_PATH
                 try {
-                    val tree = FileService.listPath(target)
+                    val tree = fileStorageService.listPath(target)
                     call.respond(tree)
                 } catch (e: IllegalArgumentException) {
                     call.respond(HttpStatusCode.BadRequest, e.message ?: "Invalid target path.")
@@ -75,10 +74,10 @@ fun Application.configureRouting() {
                 }
             }
 
-            get(ENDPOINT_DOWNLOAD) {
+            get(ApiRoutes.DOWNLOAD) {
                 try {
                     val filepath = call.request.queryParameters["filepath"] ?: ""
-                    val path = FileService.getFullPath(filepath)
+                    val path = fileStorageService.resolvePath(filepath)
                     if (Files.notExists(path)) {
                         call.respond(HttpStatusCode.NotFound, "File not found.")
                     } else {
