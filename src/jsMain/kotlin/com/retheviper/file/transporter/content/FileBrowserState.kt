@@ -1,6 +1,7 @@
 package com.retheviper.file.transporter.content
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -11,17 +12,30 @@ import com.retheviper.file.transporter.model.PathItem
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.w3c.dom.events.Event
 
 @Composable
 fun rememberFileBrowserState(): FileBrowserState {
     val scope = rememberCoroutineScope()
-    return remember(scope) { FileBrowserState(scope) }
+    val state = remember(scope) { FileBrowserState(scope) }
+
+    DisposableEffect(state) {
+        val listener: (Event) -> Unit = {
+            state.syncFromLocation()
+        }
+        window.addEventListener("hashchange", listener)
+        onDispose {
+            window.removeEventListener("hashchange", listener)
+        }
+    }
+
+    return state
 }
 
 class FileBrowserState(
     private val scope: CoroutineScope
 ) {
-    var currentPath by mutableStateOf("")
+    var currentPath by mutableStateOf(readPathFromHash())
         private set
 
     var isLoading by mutableStateOf(true)
@@ -60,6 +74,11 @@ class FileBrowserState(
 
     fun navigateTo(path: String) {
         currentPath = path
+        writePathToHash(path)
+    }
+
+    fun syncFromLocation() {
+        currentPath = readPathFromHash()
     }
 
     fun download(item: PathItem, downloadUrl: String) {
@@ -135,3 +154,20 @@ class FileBrowserState(
 
 private fun formatFileSize(size: Long): String =
     com.retheviper.file.transporter.util.FileInfoUtil.formatFileSizeWithUnit(size)
+
+private fun readPathFromHash(): String {
+    val hash = window.location.hash.removePrefix("#")
+    if (hash.isBlank()) return ""
+    return decodeUriComponent(hash)
+}
+
+private fun writePathToHash(path: String) {
+    val nextHash = if (path.isBlank()) "" else encodeUriComponent(path)
+    val currentHash = window.location.hash.removePrefix("#")
+    if (currentHash == nextHash) return
+    window.location.hash = nextHash
+}
+
+private fun encodeUriComponent(value: String): String = js("encodeURIComponent(value)") as String
+
+private fun decodeUriComponent(value: String): String = js("decodeURIComponent(value)") as String
