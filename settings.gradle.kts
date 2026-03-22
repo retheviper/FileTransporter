@@ -9,7 +9,9 @@ pluginManagement {
     }
 
     plugins {
+        kotlin("plugin.compose").version(extra["kotlin_version"] as String)
         kotlin("multiplatform").version(extra["kotlin_version"] as String)
+        kotlin("plugin.serialization").version(extra["kotlin_version"] as String)
         id("org.jetbrains.compose").version(extra["compose_version"] as String)
     }
 }

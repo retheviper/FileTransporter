@@ -1,14 +1,16 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 val kotlin_version: String by project
 val ktor_version: String by project
 val logback_version: String by project
 val serialization_version: String by project
+val compose_version: String by project
 
 plugins {
+    kotlin("plugin.compose")
     kotlin("multiplatform")
     id("org.jetbrains.compose")
-    application
-    id("io.ktor.plugin") version "2.1.2"
-    kotlin("plugin.serialization") version "1.7.10"
+    kotlin("plugin.serialization")
 }
 
 group = "com.retheviper"
@@ -21,7 +23,7 @@ repositories {
 }
 
 kotlin {
-    js(IR) {
+    js {
         browser {
             testTask {
                 testLogging.showStandardStreams = true
@@ -34,7 +36,6 @@ kotlin {
         binaries.executable()
     }
     jvm {
-        withJava()
     }
     sourceSets {
         val commonMain by getting {
@@ -50,9 +51,9 @@ kotlin {
         }
         val jsMain by getting {
             dependencies {
-                implementation(compose.web.core)
-                implementation(compose.runtime)
-                implementation("io.ktor:ktor-client-js:$ktor_version")
+                implementation("org.jetbrains.compose.html:html-core:$compose_version")
+                implementation("org.jetbrains.compose.runtime:runtime:$compose_version")
+                implementation("io.ktor:ktor-client-core:$ktor_version")
                 implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
             }
@@ -70,60 +71,46 @@ kotlin {
                 implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktor_version")
                 implementation("io.ktor:ktor-server-host-common-jvm:$ktor_version")
                 implementation("io.ktor:ktor-server-netty-jvm:$ktor_version")
-                implementation("io.ktor:ktor-server-partial-content:$ktor_version")
-                implementation("io.ktor:ktor-server-auto-head-response:$ktor_version")
-                implementation("io.ktor:ktor-network-tls-certificates:$ktor_version")
-                implementation("io.ktor:ktor-server-call-logging:$ktor_version")
+                implementation("io.ktor:ktor-server-partial-content-jvm:$ktor_version")
+                implementation("io.ktor:ktor-server-auto-head-response-jvm:$ktor_version")
+                implementation("io.ktor:ktor-network-tls-certificates-jvm:$ktor_version")
+                implementation("io.ktor:ktor-server-call-logging-jvm:$ktor_version")
                 implementation("ch.qos.logback:logback-classic:$logback_version")
-                implementation(compose.runtime)
+                implementation("org.jetbrains.compose.runtime:runtime:$compose_version")
             }
         }
         val jvmTest by getting {
             dependencies {
-                implementation("io.ktor:ktor-server-tests-jvm:$ktor_version")
-                implementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
+                implementation("io.ktor:ktor-server-test-host-jvm:$ktor_version")
+                implementation("org.jetbrains.kotlin:kotlin-test")
             }
         }
     }
 }
 
-application {
+tasks.named<Copy>("jvmProcessResources") {
+    val webpackTask = tasks.named("jsBrowserProductionWebpack")
+    dependsOn(webpackTask)
+    from(layout.buildDirectory.dir("kotlin-webpack/js/productionExecutable")) {
+        include("**/*.js", "**/*.js.map")
+    }
+}
+
+tasks.named<Jar>("jvmJar") {
+    dependsOn(tasks.named("jvmProcessResources"))
+}
+
+tasks.register<JavaExec>("run") {
+    group = "run"
+    description = "Runs the JVM server with bundled JS assets."
+    dependsOn(tasks.named("jvmJar"))
+    classpath(tasks.named("jvmJar"), configurations.getByName("jvmRuntimeClasspath"))
     mainClass.set("com.retheviper.file.transporter.ServerKt")
-
-    val isDevelopment: Boolean = project.ext.has("development")
-    applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
 
-// include JS artifacts in any JAR when generate
-tasks.getByName<Jar>("jvmJar") {
-    val webpackTask = tasks.getByName("jsBrowserProductionWebpack")
-    dependsOn(webpackTask) // make sure JS gets compiled first
-    from(
-        File("build/distributions", "file-transporter.js"),
-        File("build/distributions", "file-transporter.js.map")
-    ) // bring output file along into the JAR
-}
-
-tasks {
-    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions {
-            jvmTarget = "11"
-            freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn")
-        }
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+        freeCompilerArgs.add("-opt-in=kotlin.RequiresOptIn")
     }
-}
-
-distributions {
-    main {
-        contents {
-            from("$buildDir/libs") {
-                rename("${rootProject.name}-jvm", rootProject.name)
-                into("lib")
-            }
-        }
-    }
-}
-
-tasks.getByName<JavaExec>("run") {
-    classpath(tasks.getByName<Jar>("jvmJar")) // so that the JS artifacts generated by `jvmJar` can be found and served
 }
