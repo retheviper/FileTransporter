@@ -4,6 +4,10 @@
 
 A simple file transfer service by Full Stack of Kotlin.
 
+## Screenshot
+
+![File Transporter screenshot](docs/images/file-transporter-screenshot.png)
+
 ## Used
 
 - [Compose for Web](https://compose-web.ui.pages.jetbrains.team/)
