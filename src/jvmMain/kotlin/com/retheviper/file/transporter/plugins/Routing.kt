@@ -12,8 +12,8 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.encodeURLPath
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
-import io.ktor.server.http.content.resources
-import io.ktor.server.http.content.static
+import io.ktor.server.http.content.staticResources
+import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.request.receiveMultipart
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
@@ -30,14 +30,17 @@ fun Application.configureRouting() {
         get {
             call.respondRedirect("/index.html")
         }
-        static {
-            resources(SLASH)
-        }
+        staticResources(remotePath = SLASH, basePackage = SLASH)
 
         route(API_BASE_PATH) {
             post(ENPOINT_UPLOAD) {
-                val multipart = call.receiveMultipart()
-                FileService.saveFile(multipart)
+                try {
+                    val multipart = call.receiveMultipart()
+                    val uploadCount = FileService.saveFile(multipart)
+                    call.respond(HttpStatusCode.Created, mapOf("uploaded" to uploadCount))
+                } catch (e: IllegalArgumentException) {
+                    throw BadRequestException(e.message ?: "Invalid upload request", e)
+                }
             }
 
             get(ENDPOINT_LIST) {
