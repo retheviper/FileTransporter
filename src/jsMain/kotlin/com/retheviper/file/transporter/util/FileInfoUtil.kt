@@ -32,4 +32,16 @@ object FileInfoUtil {
         }
         return "$value $unit"
     }
+
+    fun guessTypeLabel(mimeType: String?): String {
+        if (mimeType.isNullOrBlank()) return "Unknown"
+        return when (mimeType.substringBefore(ROOT_PATH)) {
+            "image" -> "Image"
+            "video" -> "Video"
+            "audio" -> "Audio"
+            "text" -> "Text"
+            "application" -> mimeType.substringAfter("/").substringBefore(".").replace("-", " ").replaceFirstChar(Char::uppercase)
+            else -> mimeType.replace("/", " ").replace("-", " ").replaceFirstChar(Char::uppercase)
+        }
+    }
 }

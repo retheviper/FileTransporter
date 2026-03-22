@@ -34,9 +34,11 @@ import org.w3c.xhr.XMLHttpRequest
 @Composable
 fun FileBrowser() {
     val browserState = rememberFileBrowserState()
+    var selectedFile by remember { mutableStateOf<PathItem?>(null) }
 
     LaunchedEffect(browserState.currentPath) {
         browserState.refresh()
+        selectedFile = null
     }
 
     Div({
@@ -77,11 +79,15 @@ fun FileBrowser() {
                         if (pathItem.isDirectory) {
                             browserState.navigateTo(targetPath)
                         } else {
-                            browserState.download(
-                                item = pathItem,
-                                downloadUrl = "$API_URL${ApiRoutes.DOWNLOAD}?filepath=${encodeURIComponent(targetPath)}"
-                            )
+                            selectedFile = pathItem
                         }
+                    },
+                    onItemDownload = { pathItem ->
+                        val targetPath = "${pathItem.path}/${pathItem.name}"
+                        browserState.download(
+                            item = pathItem,
+                            downloadUrl = "$API_URL${ApiRoutes.DOWNLOAD}?filepath=${encodeURIComponent(targetPath)}"
+                        )
                     }
                 )
 
@@ -112,6 +118,20 @@ fun FileBrowser() {
                 }
             }
         }
+    }
+
+    selectedFile?.let { item ->
+        FileDetailsModal(
+            item = item,
+            onClose = { selectedFile = null },
+            onDownload = {
+                val targetPath = "${item.path}/${item.name}"
+                browserState.download(
+                    item = item,
+                    downloadUrl = "$API_URL${ApiRoutes.DOWNLOAD}?filepath=${encodeURIComponent(targetPath)}"
+                )
+            }
+        )
     }
 }
 
@@ -415,7 +435,137 @@ private fun TransferHistoryItem(entry: TransferHistoryEntry) {
 }
 
 @Composable
-private fun FileItem(pathItem: PathItem, onClick: () -> Unit) {
+private fun FileDetailsModal(
+    item: PathItem,
+    onClose: () -> Unit,
+    onDownload: () -> Unit
+) {
+    val details = listOf(
+        "Type" to FileInfoUtil.guessTypeLabel(item.mimeType),
+        "Path" to "${item.path}/${item.name}".replace("//", "/"),
+        "Size" to item.size?.let(FileInfoUtil::formatFileSizeWithUnit).orEmpty().ifBlank { "Unavailable" },
+        "MIME" to item.mimeType.orEmpty().ifBlank { "Unknown" }
+    )
+
+    Div({
+        style {
+            property("position", "fixed")
+            property("inset", "0")
+            property("display", "grid")
+            property("place-items", "center")
+            property("padding", "20px")
+            property("background", "rgba(2, 6, 23, 0.72)")
+            property("backdrop-filter", "blur(12px)")
+            property("z-index", "1000")
+        }
+        onClick { onClose() }
+    }) {
+        Div({
+            style {
+                panelStyle()
+                property("width", "min(560px, 100%)")
+                property("display", "grid")
+                property("gap", "16px")
+            }
+            onClick { it.stopPropagation() }
+        }) {
+            Div({
+                style {
+                    property("display", "flex")
+                    property("justify-content", "space-between")
+                    property("align-items", "start")
+                    property("gap", "12px")
+                }
+            }) {
+                Div({
+                    style {
+                        property("display", "grid")
+                        property("gap", "6px")
+                    }
+                }) {
+                    SectionEyebrow("File Info")
+                    Div({
+                        style {
+                            property("font-size", "20px")
+                            property("font-weight", "700")
+                            property("color", "#f8fafc")
+                            property("word-break", "break-word")
+                        }
+                    }) {
+                        Text(item.name)
+                    }
+                }
+
+                Button(attrs = {
+                    style {
+                        actionButtonStyle(primary = false)
+                        property("padding", "10px 12px")
+                    }
+                    onClick { onClose() }
+                }) {
+                    Text("Close")
+                }
+            }
+
+            Div({
+                style {
+                    property("display", "grid")
+                    property("gap", "10px")
+                }
+            }) {
+                details.forEach { (label, value) ->
+                    Div({
+                        style {
+                            property("display", "grid")
+                            property("gap", "4px")
+                            property("padding", "12px 14px")
+                            property("border-radius", "16px")
+                            property("background", "rgba(15, 23, 42, 0.5)")
+                            property("border", "1px solid rgba(148, 163, 184, 0.12)")
+                        }
+                    }) {
+                        Div({
+                            style {
+                                property("font-size", "11px")
+                                property("font-weight", "700")
+                                property("letter-spacing", "0.14em")
+                                property("text-transform", "uppercase")
+                                property("color", "rgba(148, 163, 184, 0.72)")
+                            }
+                        }) {
+                            Text(label)
+                        }
+                        Div({
+                            style {
+                                property("font-size", "14px")
+                                property("color", "#e2e8f0")
+                                property("word-break", "break-word")
+                            }
+                        }) {
+                            Text(value)
+                        }
+                    }
+                }
+            }
+
+            Button(attrs = {
+                style {
+                    actionButtonStyle(primary = false)
+                }
+                onClick { onDownload() }
+            }) {
+                Text("Download")
+            }
+        }
+    }
+}
+
+@Composable
+private fun FileItem(
+    pathItem: PathItem,
+    onClick: () -> Unit,
+    onDownloadClick: () -> Unit
+) {
     val icon = if (pathItem.isDirectory) "📁" else FileInfoUtil.getIconByMimeType(pathItem.mimeType)
     val meta = if (pathItem.isDirectory) "Folder" else FileInfoUtil.formatFileSizeWithUnit(pathItem.size ?: 0)
 
@@ -476,16 +626,18 @@ private fun FileItem(pathItem: PathItem, onClick: () -> Unit) {
             }
         }
 
-        Div({
+        Button(attrs = {
             style {
+                actionButtonStyle(primary = false)
+                property("padding", "10px 14px")
                 property("font-size", "12px")
-                property("font-weight", "700")
-                property("letter-spacing", "0.14em")
-                property("text-transform", "uppercase")
-                property("color", if (pathItem.isDirectory) "#5eead4" else "#93c5fd")
+            }
+            onClick {
+                it.stopPropagation()
+                onDownloadClick()
             }
         }) {
-            Text(if (pathItem.isDirectory) "Open" else "Download")
+            Text("Download")
         }
     }
 }
@@ -496,7 +648,8 @@ private fun BrowserPanel(
     selectedPathItems: List<PathItem>,
     isLoading: Boolean,
     browserError: String?,
-    onItemSelected: (PathItem) -> Unit
+    onItemSelected: (PathItem) -> Unit,
+    onItemDownload: (PathItem) -> Unit
 ) {
     Div({
         style {
@@ -571,9 +724,11 @@ private fun BrowserPanel(
                     }
                 }) {
                     selectedPathItems.forEach { pathItem ->
-                        FileItem(pathItem) {
-                            onItemSelected(pathItem)
-                        }
+                        FileItem(
+                            pathItem = pathItem,
+                            onClick = { onItemSelected(pathItem) },
+                            onDownloadClick = { onItemDownload(pathItem) }
+                        )
                     }
                 }
             }

@@ -69,7 +69,7 @@ class FileBrowserState(
                 type = "Download",
                 fileName = item.name,
                 location = formatDisplayPath(currentPath),
-                detail = item.size?.let { formatFileSize(it) } ?: "Ready",
+                detail = if (item.isDirectory) "ZIP archive" else item.size?.let { formatFileSize(it) } ?: "Ready",
                 state = "Completed"
             )
         )
