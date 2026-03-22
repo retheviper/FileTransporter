@@ -11,8 +11,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.io.asSink
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
+import java.nio.file.NotDirectoryException
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import kotlin.io.path.fileSize
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isHidden
@@ -23,18 +24,24 @@ object FileService {
     suspend fun saveFile(multipart: MultiPartData): Int {
         var path = getFullPath("")
         var uploadCount = 0
+        var pendingFailure: Exception? = null
         multipart.forEachPart { part ->
             when (part) {
                 is PartData.FormItem -> {
                     if (part.name == "target") {
-                        path = getFullPath(part.value)
+                        pendingFailure = runCatching {
+                            getFullPath(part.value).also(::requireDirectory)
+                        }.onSuccess { validatedPath ->
+                            path = validatedPath
+                        }.exceptionOrNull() as? Exception
                     }
                 }
 
                 is PartData.FileItem -> {
                     withContext(Dispatchers.IO) {
                         val filename = part.originalFileName?.substringAfterLast("/")?.substringAfterLast("\\")
-                        if (!filename.isNullOrBlank()) {
+                        if (pendingFailure == null && !filename.isNullOrBlank()) {
+                            requireDirectory(path)
                             Files.createDirectories(path)
                             val file = path.resolve(filename)
                             Files.newOutputStream(file).use { output ->
@@ -51,6 +58,7 @@ object FileService {
             }
             part.dispose()
         }
+        pendingFailure?.let { throw it }
         return uploadCount
     }
 
@@ -67,15 +75,14 @@ object FileService {
 
     suspend fun listPath(target: String): List<PathItem> {
         return withContext(Dispatchers.IO) {
-            try {
-                Files.list(getFullPath(target))
+            val directory = getFullPath(target)
+            requireDirectory(directory)
+            Files.list(directory).use { stream ->
+                stream
                     .toList()
                     .filter { !it.isHidden() }
                     .map { it.toPathItem() }
-                    .sortedBy { it.name }
-                    .sortedBy { it.type }
-            } catch (e: Exception) {
-                emptyList()
+                    .sortedWith(compareBy({ it.type }, { it.name.lowercase() }))
             }
         }
     }
@@ -88,5 +95,14 @@ object FileService {
             mimeType = if (this.isDirectory()) null else Files.probeContentType(this),
             path = this.parent.toString().substringAfter(rootDirectory().toString())
         )
+    }
+
+    private fun requireDirectory(path: Path) {
+        if (Files.notExists(path)) {
+            throw NoSuchFileException(path.toString())
+        }
+        if (!Files.isDirectory(path)) {
+            throw NotDirectoryException(path.toString())
+        }
     }
 }

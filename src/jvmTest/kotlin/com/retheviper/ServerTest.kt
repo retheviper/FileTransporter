@@ -92,4 +92,88 @@ class ServerTest {
             tempRoot.toFile().deleteRecursively()
         }
     }
+
+    @Test
+    fun listEndpointRejectsPathTraversal() = testApplication {
+        val tempRoot = Files.createTempDirectory("file-transporter-invalid-list-test")
+        System.setProperty("file.transporter.root", tempRoot.toString())
+        try {
+            application {
+                configureSerialization()
+                configureRouting()
+            }
+
+            val response = client.get("/api/v1/list?target=../../outside") {
+                contentType(ContentType.Application.Json)
+            }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+            assertTrue(response.bodyAsText().contains("Invalid target path"))
+        } finally {
+            System.clearProperty("file.transporter.root")
+            tempRoot.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun uploadRejectsFileTarget() = testApplication {
+        val tempRoot = Files.createTempDirectory("file-transporter-upload-target-test")
+        System.setProperty("file.transporter.root", tempRoot.toString())
+        try {
+            tempRoot.resolve("not-a-directory.txt").writeText("existing")
+
+            application {
+                configureSerialization()
+                configureRouting()
+                configureContent()
+            }
+
+            val response = client.post("/api/v1/upload") {
+                setBody(
+                    MultiPartFormDataContent(
+                        formData {
+                            append("target", "/not-a-directory.txt")
+                            append(
+                                key = "file",
+                                value = "new content".toByteArray(),
+                                headers = io.ktor.http.Headers.build {
+                                    append(
+                                        HttpHeaders.ContentDisposition,
+                                        """form-data; name="file"; filename="hello.txt""""
+                                    )
+                                    append(HttpHeaders.ContentType, ContentType.Text.Plain.toString())
+                                }
+                            )
+                        }
+                    )
+                )
+            }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+            assertEquals("Target is not a directory.", response.bodyAsText())
+        } finally {
+            System.clearProperty("file.transporter.root")
+            tempRoot.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun downloadReturnsNotFoundForMissingFile() = testApplication {
+        val tempRoot = Files.createTempDirectory("file-transporter-download-test")
+        System.setProperty("file.transporter.root", tempRoot.toString())
+        try {
+            application {
+                configureSerialization()
+                configureRouting()
+            }
+
+            val response = client.get("/api/v1/download?filepath=/missing.txt")
+
+            assertEquals(HttpStatusCode.NotFound, response.status)
+            assertEquals("File not found.", response.bodyAsText())
+        } finally {
+            System.clearProperty("file.transporter.root")
+            tempRoot.toFile().deleteRecursively()
+        }
+    }
 }
