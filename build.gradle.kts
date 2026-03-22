@@ -112,6 +112,15 @@ tasks.register<JavaExec>("run") {
     mainClass.set("com.retheviper.file.transporter.ServerKt")
 }
 
+tasks.register("test") {
+    group = "verification"
+    description = "Runs both JVM and JS test suites."
+    dependsOn(
+        tasks.named("jvmTest"),
+        tasks.named("jsTest")
+    )
+}
+
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
