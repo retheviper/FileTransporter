@@ -8,10 +8,12 @@ pluginManagement {
         maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     }
 
-    plugins {
-        kotlin("plugin.compose").version(extra["kotlin_version"] as String)
-        kotlin("multiplatform").version(extra["kotlin_version"] as String)
-        kotlin("plugin.serialization").version(extra["kotlin_version"] as String)
-        id("org.jetbrains.compose").version(extra["compose_version"] as String)
+}
+
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     }
 }
