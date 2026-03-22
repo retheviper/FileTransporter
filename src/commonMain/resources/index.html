@@ -2,7 +2,53 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Sample</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Transporter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            margin: 0;
+            min-height: 100%;
+            background: #050811;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        @media (max-width: 900px) {
+            #root > div > div > div:nth-child(2) {
+                grid-template-columns: 1fr !important;
+            }
+
+            #root > div > div > div:first-child > div:last-child {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        @media (max-width: 640px) {
+            #root > div {
+                padding: 20px 14px 28px !important;
+            }
+
+            #root > div > div > div:first-child,
+            #root > div > div > div:nth-child(2) > div {
+                padding: 20px !important;
+            }
+
+            #root > div > div > div:nth-child(2) > div:last-child,
+            #root > div > div > div:first-child > div:last-child {
+                grid-template-columns: 1fr !important;
+            }
+        }
+    </style>
 </head>
 <body>
 <div id="root"></div>

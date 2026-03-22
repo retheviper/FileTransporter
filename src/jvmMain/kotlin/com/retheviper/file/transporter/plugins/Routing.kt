@@ -4,6 +4,7 @@ import com.retheviper.file.transporter.constant.API_BASE_PATH
 import com.retheviper.file.transporter.constant.ENDPOINT_DOWNLOAD
 import com.retheviper.file.transporter.constant.ENDPOINT_LIST
 import com.retheviper.file.transporter.constant.ENPOINT_UPLOAD
+import com.retheviper.file.transporter.constant.MULTIPART_FORM_FIELD_LIMIT_BYTES
 import com.retheviper.file.transporter.constant.SLASH
 import com.retheviper.file.transporter.service.FileService
 import io.ktor.http.ContentDisposition
@@ -35,11 +36,20 @@ fun Application.configureRouting() {
         route(API_BASE_PATH) {
             post(ENPOINT_UPLOAD) {
                 try {
-                    val multipart = call.receiveMultipart()
+                    val multipart = call.receiveMultipart(formFieldLimit = MULTIPART_FORM_FIELD_LIMIT_BYTES)
                     val uploadCount = FileService.saveFile(multipart)
                     call.respond(HttpStatusCode.Created, mapOf("uploaded" to uploadCount))
                 } catch (e: IllegalArgumentException) {
                     throw BadRequestException(e.message ?: "Invalid upload request", e)
+                } catch (e: Throwable) {
+                    if (e.isMultipartLimitError()) {
+                        call.respond(
+                            HttpStatusCode.PayloadTooLarge,
+                            "Upload payload exceeds the server's configured multipart limit."
+                        )
+                    } else {
+                        throw e
+                    }
                 }
             }
 
@@ -71,4 +81,8 @@ fun Application.configureRouting() {
             }
         }
     }
+}
+
+private fun Throwable.isMultipartLimitError(): Boolean {
+    return message?.contains("exceeded while searching for", ignoreCase = true) == true
 }
