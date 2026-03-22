@@ -5,24 +5,18 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.retheviper.file.transporter.client.API_URL
-import com.retheviper.file.transporter.client.listPathItem
 import com.retheviper.file.transporter.constant.ENDPOINT_DOWNLOAD
 import com.retheviper.file.transporter.constant.ENPOINT_UPLOAD
-import com.retheviper.file.transporter.constant.SLASH
 import com.retheviper.file.transporter.model.PathItem
 import com.retheviper.file.transporter.style.pointerCursor
 import com.retheviper.file.transporter.util.FileInfoUtil
-import io.ktor.http.encodeURLParameter
-import kotlinx.browser.window
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.await
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
-import org.jetbrains.compose.web.attributes.ATarget
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.web.attributes.InputType
 import org.jetbrains.compose.web.attributes.disabled
 import org.jetbrains.compose.web.attributes.name
@@ -39,29 +33,11 @@ import org.w3c.xhr.FormData
 import org.w3c.xhr.XMLHttpRequest
 
 @Composable
-fun FileBrowser(scope: CoroutineScope) {
-    var currentPath by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(true) }
-    var selectedPathItems by remember { mutableStateOf(emptyList<PathItem>()) }
-    var uploadError by remember { mutableStateOf<String?>(null) }
-    var browserError by remember { mutableStateOf<String?>(null) }
-    var uploadProgress by remember { mutableStateOf<Int?>(null) }
-    var transferHistory by remember { mutableStateOf(emptyList<TransferHistoryEntry>()) }
+fun FileBrowser() {
+    val browserState = rememberFileBrowserState()
 
-    LaunchedEffect(currentPath) {
-        isLoading = true
-        browserError = null
-        runCatching {
-            listPathItem(currentPath).sortedWith(
-                compareBy<PathItem>({ !it.isDirectory }, { it.name.lowercase() })
-            )
-        }.onSuccess {
-            selectedPathItems = it
-        }.onFailure { error ->
-            browserError = error.message ?: "Unable to load files."
-            selectedPathItems = emptyList()
-        }
-        isLoading = false
+    LaunchedEffect(browserState.currentPath) {
+        browserState.refresh()
     }
 
     Div({
@@ -80,12 +56,8 @@ fun FileBrowser(scope: CoroutineScope) {
             }
         }) {
             BreadcrumbSection(
-                currentPath = currentPath,
-                onNavigate = { path ->
-                    scope.launch {
-                        currentPath = path
-                    }
-                }
+                currentPath = browserState.currentPath,
+                onNavigate = browserState::navigateTo
             )
 
             Div({
@@ -97,28 +69,18 @@ fun FileBrowser(scope: CoroutineScope) {
                 }
             }) {
                 BrowserPanel(
-                    currentPath = currentPath,
-                    selectedPathItems = selectedPathItems,
-                    isLoading = isLoading,
-                    browserError = browserError,
+                    currentPath = browserState.currentPath,
+                    selectedPathItems = browserState.pathItems,
+                    isLoading = browserState.isLoading,
+                    browserError = browserState.browserError,
                     onItemSelected = { pathItem ->
                         val targetPath = "${pathItem.path}/${pathItem.name}"
                         if (pathItem.isDirectory) {
-                            currentPath = targetPath
+                            browserState.navigateTo(targetPath)
                         } else {
-                            transferHistory = prependHistory(
-                                transferHistory,
-                                TransferHistoryEntry(
-                                    type = "Download",
-                                    fileName = pathItem.name,
-                                    location = formatDisplayPath(currentPath),
-                                    detail = pathItem.size?.let(FileInfoUtil::formatFileSizeWithUnit) ?: "Ready",
-                                    state = "Completed"
-                                )
-                            )
-                            window.open(
-                                url = "$API_URL$ENDPOINT_DOWNLOAD?filepath=${targetPath.encodeURLParameter()}",
-                                target = ATarget.Blank.targetStr
+                            browserState.download(
+                                item = pathItem,
+                                downloadUrl = "$API_URL$ENDPOINT_DOWNLOAD?filepath=${encodeURIComponent(targetPath)}"
                             )
                         }
                     }
@@ -132,73 +94,22 @@ fun FileBrowser(scope: CoroutineScope) {
                     }
                 }) {
                     FileUploadForm(
-                        currentPath = currentPath,
-                        scope = scope,
-                        uploadProgress = uploadProgress,
-                        onUploaded = {
-                            uploadError = null
-                            uploadProgress = null
-                            browserError = null
-                            selectedPathItems = listPathItem(currentPath).sortedWith(
-                                compareBy<PathItem>({ !it.isDirectory }, { it.name.lowercase() })
-                            )
-                        },
-                        onUploadStarted = { fileName ->
-                            uploadProgress = 0
-                            transferHistory = prependHistory(
-                                transferHistory,
-                                TransferHistoryEntry(
-                                    type = "Upload",
-                                    fileName = fileName,
-                                    location = formatDisplayPath(currentPath),
-                                    detail = "Preparing transfer",
-                                    state = "Running"
-                                )
-                            )
-                        },
-                        onUploadProgress = { fileName, percent ->
-                            uploadProgress = percent
-                            transferHistory = updateLatestHistory(
-                                transferHistory,
-                                type = "Upload",
-                                fileName = fileName,
-                                state = "Running",
-                                detail = "$percent% uploaded"
-                            )
-                        },
-                        onUploadFinished = { fileName ->
-                            uploadProgress = 100
-                            transferHistory = updateLatestHistory(
-                                transferHistory,
-                                type = "Upload",
-                                fileName = fileName,
-                                state = "Completed",
-                                detail = "Upload complete"
-                            )
-                        },
-                        onUploadFailed = { fileName, message ->
-                            uploadProgress = null
-                            transferHistory = updateLatestHistory(
-                                transferHistory,
-                                type = "Upload",
-                                fileName = fileName,
-                                state = "Failed",
-                                detail = message
-                            )
-                        },
-                        onError = { message ->
-                            uploadError = message
-                        }
+                        currentPath = browserState.currentPath,
+                        uploadProgress = browserState.uploadProgress,
+                        onUploadStarted = browserState::startUpload,
+                        onUploadProgress = browserState::updateUploadProgress,
+                        onUploadFinished = browserState::finishUpload,
+                        onUploadFailed = browserState::failUpload
                     )
 
-                    if (uploadError != null) {
+                    browserState.uploadError?.let { message ->
                         StatusMessage(
-                            message = uploadError!!,
+                            message = message,
                             tone = "error"
                         )
                     }
 
-                    TransferHistoryPanel(transferHistory)
+                    TransferHistoryPanel(browserState.transferHistory)
                 }
             }
         }
@@ -208,24 +119,19 @@ fun FileBrowser(scope: CoroutineScope) {
 @Composable
 private fun FileUploadForm(
     currentPath: String,
-    scope: CoroutineScope,
     uploadProgress: Int?,
-    onUploaded: suspend () -> Unit,
     onUploadStarted: (String) -> Unit,
     onUploadProgress: (String, Int) -> Unit,
     onUploadFinished: (String) -> Unit,
-    onUploadFailed: (String, String) -> Unit,
-    onError: (String) -> Unit
+    onUploadFailed: (String, String) -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     var fileInput by remember { mutableStateOf<HTMLInputElement?>(null) }
     var isUploading by remember { mutableStateOf(false) }
     var isDragActive by remember { mutableStateOf(false) }
 
     fun beginUpload(selectedFile: File?) {
         if (selectedFile == null || isUploading) {
-            if (selectedFile == null) {
-                onError("Select a file to upload.")
-            }
             return
         }
 
@@ -242,10 +148,8 @@ private fun FileUploadForm(
                 )
                 fileInput?.value = ""
                 onUploadFinished(selectedFile.name)
-                onUploaded()
             } catch (e: Throwable) {
                 onUploadFailed(selectedFile.name, e.message ?: "File upload failed.")
-                onError(e.message ?: "File upload failed.")
             } finally {
                 isUploading = false
                 isDragActive = false
@@ -612,19 +516,28 @@ private fun BrowserPanel(
                 property("flex-wrap", "wrap")
             }
         }) {
-        Div({
-            style {
-                property("display", "grid")
-                property("gap", "0")
+            Div({
+                style {
+                    property("display", "grid")
+                    property("gap", "0")
+                }
+            }) {
+                SectionEyebrow("Browser")
             }
-        }) {
-            SectionEyebrow("Browser")
-        }
+
+            Div({
+                style {
+                    property("font-size", "13px")
+                    property("color", "rgba(148, 163, 184, 0.82)")
+                }
+            }) {
+                Text(formatDisplayPath(currentPath))
+            }
         }
 
-        if (browserError != null) {
+        browserError?.let {
             StatusMessage(
-                message = browserError,
+                message = it,
                 tone = "error"
             )
         }
@@ -762,7 +675,7 @@ private suspend fun uploadFile(
     file: File,
     currentPath: String,
     onProgress: (Int) -> Unit
-) = suspendCoroutine<Unit> { continuation ->
+) = suspendCancellableCoroutine<Unit> { continuation ->
     val formData = FormData()
     formData.append("target", currentPath)
     formData.append("file", file, file.name)
@@ -788,10 +701,13 @@ private suspend fun uploadFile(
     xhr.onerror = {
         continuation.resumeWithException(IllegalStateException("File upload failed."))
     }
+    continuation.invokeOnCancellation {
+        xhr.abort()
+    }
     xhr.send(formData)
 }
 
-private fun formatDisplayPath(path: String): String = if (path.isBlank()) "Root /" else path
+fun formatDisplayPath(path: String): String = if (path.isBlank()) "Root /" else path
 
 private fun StyleScope.panelStyle() {
     property("padding", "26px")
@@ -818,7 +734,7 @@ private fun StyleScope.actionButtonStyle(primary: Boolean) {
     property("text-transform", "uppercase")
 }
 
-private data class TransferHistoryEntry(
+data class TransferHistoryEntry(
     val type: String,
     val fileName: String,
     val location: String,
@@ -827,15 +743,16 @@ private data class TransferHistoryEntry(
     val timestamp: String = nowLabel()
 )
 
-private fun prependHistory(
+fun prependHistory(
     history: List<TransferHistoryEntry>,
     entry: TransferHistoryEntry
 ): List<TransferHistoryEntry> = listOf(entry) + history.take(7)
 
-private fun updateLatestHistory(
+fun updateLatestHistory(
     history: List<TransferHistoryEntry>,
     type: String,
     fileName: String,
+    location: String,
     state: String,
     detail: String
 ): List<TransferHistoryEntry> {
@@ -846,7 +763,7 @@ private fun updateLatestHistory(
             TransferHistoryEntry(
                 type = type,
                 fileName = fileName,
-                location = "Unknown",
+                location = location,
                 detail = detail,
                 state = state
             )
@@ -856,6 +773,7 @@ private fun updateLatestHistory(
     return history.mapIndexed { currentIndex, entry ->
         if (currentIndex == index) {
             entry.copy(
+                location = location,
                 detail = detail,
                 state = state,
                 timestamp = nowLabel()
@@ -887,3 +805,5 @@ private fun breadcrumbItems(path: String): List<BreadcrumbItem> {
     }
     return items
 }
+
+private fun encodeURIComponent(value: String): String = js("encodeURIComponent(value)") as String

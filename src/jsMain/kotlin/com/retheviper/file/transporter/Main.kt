@@ -1,14 +1,10 @@
 package com.retheviper.file.transporter
 
 import com.retheviper.file.transporter.content.FileBrowser
-import kotlinx.coroutines.MainScope
 import org.jetbrains.compose.web.dom.Div
 import org.jetbrains.compose.web.renderComposable
 
-private val scope = MainScope()
-
 fun main() {
-
     renderComposable(rootElementId = "root") {
         Div({
             style {
@@ -18,7 +14,7 @@ fun main() {
                 property("font-family", "'Space Grotesk', 'Inter', 'Segoe UI', sans-serif")
             }
         }) {
-            FileBrowser(scope)
+            FileBrowser()
         }
     }
 }

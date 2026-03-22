@@ -41,7 +41,6 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serialization_version")
-                implementation("io.ktor:ktor-client-core:$ktor_version")
             }
         }
         val commonTest by getting {
@@ -53,9 +52,6 @@ kotlin {
             dependencies {
                 implementation("org.jetbrains.compose.html:html-core:$compose_version")
                 implementation("org.jetbrains.compose.runtime:runtime:$compose_version")
-                implementation("io.ktor:ktor-client-core:$ktor_version")
-                implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
             }
         }
         val jsTest by getting {

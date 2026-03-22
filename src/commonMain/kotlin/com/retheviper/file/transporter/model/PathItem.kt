@@ -11,5 +11,6 @@ data class PathItem(
     val mimeType: String? = null,
     val size: Long? = null
 ) {
-    var isDirectory: Boolean = type == FileType.DIRECTORY
+    val isDirectory: Boolean
+        get() = type == FileType.DIRECTORY
 }

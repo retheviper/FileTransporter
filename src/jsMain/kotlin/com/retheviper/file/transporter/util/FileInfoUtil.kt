@@ -6,18 +6,17 @@ import com.retheviper.file.transporter.constant.CONTENT_SIZE_UNIT_KILOBYTE
 import com.retheviper.file.transporter.constant.CONTENT_SIZE_UNIT_MEGABYTE
 import com.retheviper.file.transporter.constant.CONTENT_SIZE_UNIT_VALUE
 import com.retheviper.file.transporter.constant.SLASH
-import io.ktor.http.ContentType
 
 object FileInfoUtil {
 
     fun getIconByMimeType(mimeType: String?): String {
         if (mimeType == null) return "📄"
         return when (mimeType.substringBefore(SLASH)) {
-            ContentType.Image.Any.contentType -> "🏞"
-            ContentType.Video.Any.contentType -> "🎬"
-            ContentType.Audio.Any.contentType -> "🎵"
-            ContentType.Text.Any.contentType -> "🗓"
-            ContentType.Application.Any.contentType -> "🖥"
+            "image" -> "🏞"
+            "video" -> "🎬"
+            "audio" -> "🎵"
+            "text" -> "🗓"
+            "application" -> "🖥"
             else -> "📄"
         }
     }
