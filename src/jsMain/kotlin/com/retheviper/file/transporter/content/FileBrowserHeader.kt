@@ -43,13 +43,45 @@ internal fun HeaderSection(
 
         Button(attrs = {
             style {
-                actionButtonStyle(theme, primary = false)
-                property("padding", "12px 16px")
-                property("gap", "8px")
+                pointerCursor()
+                property("display", "inline-flex")
+                property("align-items", "center")
+                property("gap", "14px")
+                property("padding", "8px 10px")
+                property("border", "none")
+                property("background", "transparent")
+                property("color", theme.headingText)
+                property("font-size", "clamp(18px, 1.6vw, 22px)")
+                property("font-weight", "600")
             }
             onClick { onThemeToggle() }
         }) {
-            Text(if (theme.isDark) "☀" else "☾")
+            Div({
+                style {
+                    property("position", "relative")
+                    property("width", "34px")
+                    property("height", "20px")
+                    property("border-radius", "999px")
+                    property("border", "2px solid ${if (theme.isDark) "rgba(248, 250, 252, 0.92)" else "rgba(15, 23, 42, 0.78)"}")
+                    property("background", "transparent")
+                    property("box-sizing", "border-box")
+                    property("flex-shrink", "0")
+                }
+            }) {
+                Div({
+                    style {
+                        property("position", "absolute")
+                        property("top", "50%")
+                        property("left", if (theme.isDark) "15px" else "3px")
+                        property("width", "10px")
+                        property("height", "10px")
+                        property("border-radius", "50%")
+                        property("background", if (theme.isDark) "rgba(248, 250, 252, 0.92)" else "rgba(15, 23, 42, 0.78)")
+                        property("transform", "translateY(-50%)")
+                        property("transition", "left 180ms ease, background 180ms ease")
+                    }
+                })
+            }
             Text("Dark mode")
         }
     }
