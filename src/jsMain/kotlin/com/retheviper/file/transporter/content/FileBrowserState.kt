@@ -8,7 +8,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.retheviper.file.transporter.client.listPathItem
 import com.retheviper.file.transporter.model.PathItem
-import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -22,10 +21,30 @@ fun rememberFileBrowserState(): FileBrowserState {
     return state
 }
 
+interface FileBrowserStateDependencies {
+    suspend fun listPathItems(path: String): List<PathItem>
+    fun readPathFromHash(): String
+    fun writePathToHash(path: String)
+    fun openDownload(url: String)
+}
+
+object DefaultFileBrowserStateDependencies : FileBrowserStateDependencies {
+    override suspend fun listPathItems(path: String): List<PathItem> = listPathItem(path)
+
+    override fun readPathFromHash(): String = com.retheviper.file.transporter.content.readPathFromHash()
+
+    override fun writePathToHash(path: String) = com.retheviper.file.transporter.content.writePathToHash(path)
+
+    override fun openDownload(url: String) {
+        kotlinx.browser.window.open(url, "_blank")
+    }
+}
+
 class FileBrowserState(
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val dependencies: FileBrowserStateDependencies = DefaultFileBrowserStateDependencies
 ) {
-    var currentPath by mutableStateOf(readPathFromHash())
+    var currentPath by mutableStateOf(dependencies.readPathFromHash())
         private set
 
     var isLoading by mutableStateOf(true)
@@ -50,7 +69,7 @@ class FileBrowserState(
         isLoading = true
         browserError = null
         runCatching {
-            listPathItem(currentPath).sortedWith(
+            dependencies.listPathItems(currentPath).sortedWith(
                 compareBy<PathItem>({ !it.isDirectory }, { it.name.lowercase() })
             )
         }.onSuccess { items ->
@@ -64,11 +83,11 @@ class FileBrowserState(
 
     fun navigateTo(path: String) {
         currentPath = path
-        writePathToHash(path)
+        dependencies.writePathToHash(path)
     }
 
     fun syncFromLocation() {
-        currentPath = readPathFromHash()
+        currentPath = dependencies.readPathFromHash()
     }
 
     fun download(item: PathItem, downloadUrl: String) {
@@ -82,7 +101,7 @@ class FileBrowserState(
                 state = "Completed"
             )
         )
-        window.open(downloadUrl, "_blank")
+        dependencies.openDownload(downloadUrl)
     }
 
     fun startUpload(fileName: String) {

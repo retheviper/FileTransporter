@@ -30,7 +30,9 @@ kotlin {
                 testLogging.showStandardStreams = true
                 useKarma {
                     useChromeHeadless()
-                    useFirefox()
+                    if (!System.getenv("FIREFOX_BIN").isNullOrBlank()) {
+                        useFirefox()
+                    }
                 }
             }
         }
@@ -58,6 +60,7 @@ kotlin {
         val jsTest by getting {
             dependencies {
                 implementation(kotlin("test-js"))
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
             }
         }
         val jvmMain by getting {
@@ -68,6 +71,7 @@ kotlin {
                 implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktor_version")
                 implementation("io.ktor:ktor-server-host-common-jvm:$ktor_version")
                 implementation("io.ktor:ktor-server-netty-jvm:$ktor_version")
+                implementation("io.ktor:ktor-server-status-pages-jvm:$ktor_version")
                 implementation("io.ktor:ktor-server-partial-content-jvm:$ktor_version")
                 implementation("io.ktor:ktor-server-auto-head-response-jvm:$ktor_version")
                 implementation("io.ktor:ktor-network-tls-certificates-jvm:$ktor_version")
@@ -82,6 +86,7 @@ kotlin {
             dependencies {
                 implementation("io.ktor:ktor-server-test-host-jvm:$ktor_version")
                 implementation("org.jetbrains.kotlin:kotlin-test")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
             }
         }
     }

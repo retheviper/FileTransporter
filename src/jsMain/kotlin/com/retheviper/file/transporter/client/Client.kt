@@ -12,14 +12,42 @@ private val json = Json {
     ignoreUnknownKeys = true
 }
 
-suspend fun listPathItem(target: String): List<PathItem> {
+data class ClientResponse(
+    val ok: Boolean,
+    val status: Short,
+    val statusText: String,
+    val body: String
+)
+
+interface ClientDependencies {
+    val apiUrl: String
+    suspend fun fetch(url: String): ClientResponse
+}
+
+object WindowClientDependencies : ClientDependencies {
+    override val apiUrl: String = API_URL
+
+    override suspend fun fetch(url: String): ClientResponse {
+        val response = window.fetch(url).await()
+        return ClientResponse(
+            ok = response.ok,
+            status = response.status,
+            statusText = response.statusText,
+            body = response.text().await()
+        )
+    }
+}
+
+suspend fun listPathItem(
+    target: String,
+    dependencies: ClientDependencies = WindowClientDependencies
+): List<PathItem> {
     val encodedTarget = encodeURIComponent(target)
-    val response = window.fetch("$API_URL${ApiRoutes.LIST}?target=$encodedTarget").await()
+    val response = dependencies.fetch("${dependencies.apiUrl}${ApiRoutes.LIST}?target=$encodedTarget")
     if (!response.ok) {
         error("Unable to load files: ${response.status} ${response.statusText}")
     }
-    val payload = response.text().await()
-    return json.decodeFromString(payload)
+    return json.decodeFromString(response.body)
 }
 
 private fun encodeURIComponent(value: String): String = js("encodeURIComponent(value)") as String
