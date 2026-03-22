@@ -89,6 +89,10 @@ fun Application.configureRouting(
     }
 }
 
-private fun Throwable.isMultipartLimitError(): Boolean {
-    return message?.contains("exceeded while searching for", ignoreCase = true) == true
+internal fun Throwable.isMultipartLimitError(): Boolean {
+    return generateSequence(this) { it.cause }.any { throwable ->
+        val errorMessage = throwable.message ?: return@any false
+        errorMessage.contains("exceeded while searching for", ignoreCase = true) ||
+            errorMessage.contains("content length exceeds limit", ignoreCase = true)
+    }
 }

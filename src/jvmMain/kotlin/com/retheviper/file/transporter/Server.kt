@@ -7,6 +7,7 @@ import com.retheviper.file.transporter.plugins.configureContent
 import com.retheviper.file.transporter.plugins.configureLogging
 import com.retheviper.file.transporter.plugins.configureRouting
 import com.retheviper.file.transporter.plugins.configureSerialization
+import com.retheviper.file.transporter.plugins.configureStatusPages
 import com.retheviper.file.transporter.service.FileStorageService
 import io.ktor.network.tls.certificates.buildKeyStore
 import io.ktor.network.tls.certificates.saveToFile
@@ -45,6 +46,7 @@ fun Application.module() {
 
     configureLogging()
     configureSerialization()
+    configureStatusPages()
     configureRouting(
         fileStorageService = fileStorageService,
         maxUploadFileSizeBytes = settings.maxUploadFileSizeBytes

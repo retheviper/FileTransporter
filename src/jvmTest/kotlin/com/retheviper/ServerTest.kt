@@ -4,6 +4,7 @@ import com.retheviper.file.transporter.config.AppSettings
 import com.retheviper.file.transporter.plugins.configureContent
 import com.retheviper.file.transporter.plugins.configureRouting
 import com.retheviper.file.transporter.plugins.configureSerialization
+import com.retheviper.file.transporter.plugins.configureStatusPages
 import com.retheviper.file.transporter.service.LocalFileStorageService
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.forms.formData
@@ -183,6 +184,26 @@ class ServerTest {
     }
 
     @Test
+    fun downloadRejectsPathTraversal() = testApplication {
+        val tempRoot = Files.createTempDirectory("file-transporter-download-invalid-test")
+        System.setProperty("file.transporter.root", tempRoot.toString())
+        try {
+            application {
+                configureSerialization()
+                configureRoutingForTest(tempRoot)
+            }
+
+            val response = client.get("/api/v1/download?filepath=../../outside.txt")
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+            assertEquals("Invalid target path", response.bodyAsText())
+        } finally {
+            System.clearProperty("file.transporter.root")
+            tempRoot.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun downloadReturnsZipForDirectory() = testApplication {
         val tempRoot = Files.createTempDirectory("file-transporter-download-directory-test")
         System.setProperty("file.transporter.root", tempRoot.toString())
@@ -219,6 +240,122 @@ class ServerTest {
             tempRoot.toFile().deleteRecursively()
         }
     }
+
+    @Test
+    fun downloadReturnsAttachmentHeaderForSingleFile() = testApplication {
+        val tempRoot = Files.createTempDirectory("file-transporter-download-file-test")
+        System.setProperty("file.transporter.root", tempRoot.toString())
+        try {
+            tempRoot.resolve("hello world.txt").writeText("content")
+
+            application {
+                configureSerialization()
+                configureRoutingForTest(tempRoot)
+                configureContent()
+            }
+
+            val response = client.get("/api/v1/download?filepath=/hello world.txt")
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals("attachment; filename=hello%20world.txt", response.headers[HttpHeaders.ContentDisposition])
+            assertEquals("content", response.bodyAsText())
+        } finally {
+            System.clearProperty("file.transporter.root")
+            tempRoot.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun downloadReturnsEmptyZipForEmptyDirectory() = testApplication {
+        val tempRoot = Files.createTempDirectory("file-transporter-download-empty-directory-test")
+        System.setProperty("file.transporter.root", tempRoot.toString())
+        try {
+            tempRoot.resolve("empty folder").createDirectories()
+
+            application {
+                configureSerialization()
+                configureRoutingForTest(tempRoot)
+            }
+
+            val response = client.get("/api/v1/download?filepath=/empty folder")
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals("attachment; filename=empty%20folder.zip", response.headers[HttpHeaders.ContentDisposition])
+
+            ZipInputStream(response.bodyAsChannel().toInputStream()).use { zip ->
+                assertEquals(null, zip.nextEntry)
+            }
+        } finally {
+            System.clearProperty("file.transporter.root")
+            tempRoot.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun downloadUsesArchiveNameForRootDirectory() = testApplication {
+        val tempRoot = Files.createTempDirectory("file-transporter-download-root-directory-test")
+        System.setProperty("file.transporter.root", tempRoot.toString())
+        try {
+            tempRoot.resolve("hello.txt").writeText("content")
+
+            application {
+                configureSerialization()
+                configureRoutingForTest(tempRoot)
+            }
+
+            val response = client.get("/api/v1/download?filepath=/")
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(
+                "attachment; filename=${tempRoot.fileName}.zip",
+                response.headers[HttpHeaders.ContentDisposition]
+            )
+        } finally {
+            System.clearProperty("file.transporter.root")
+            tempRoot.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun uploadReturnsNotFoundWhenTargetDirectoryDoesNotExist() = testApplication {
+        val tempRoot = Files.createTempDirectory("file-transporter-upload-missing-target-test")
+        System.setProperty("file.transporter.root", tempRoot.toString())
+        try {
+            application {
+                configureSerialization()
+                configureRoutingForTest(tempRoot)
+                configureContent()
+            }
+
+            val response = client.post("/api/v1/upload") {
+                setBody(
+                    MultiPartFormDataContent(
+                        formData {
+                            append("target", "/missing")
+                            append(
+                                key = "file",
+                                value = "new content".toByteArray(),
+                                headers = io.ktor.http.Headers.build {
+                                    append(
+                                        HttpHeaders.ContentDisposition,
+                                        """form-data; name="file"; filename="hello.txt""""
+                                    )
+                                    append(HttpHeaders.ContentType, ContentType.Text.Plain.toString())
+                                }
+                            )
+                        }
+                    )
+                )
+            }
+
+            assertEquals(HttpStatusCode.NotFound, response.status)
+            assertEquals("Target directory not found.", response.bodyAsText())
+        } finally {
+            System.clearProperty("file.transporter.root")
+            tempRoot.toFile().deleteRecursively()
+        }
+    }
+
 }
 
 private fun io.ktor.server.application.Application.configureRoutingForTest(rootDirectory: java.nio.file.Path) {
@@ -226,6 +363,7 @@ private fun io.ktor.server.application.Application.configureRoutingForTest(rootD
         rootDirectory = rootDirectory,
         maxUploadFileSizeBytes = 1024L * 1024L
     )
+    configureStatusPages()
     configureRouting(
         fileStorageService = LocalFileStorageService(settings.rootDirectory),
         maxUploadFileSizeBytes = settings.maxUploadFileSizeBytes
