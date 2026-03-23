@@ -25,7 +25,7 @@ class LocalFileStorageServiceTest {
         try {
             val service = LocalFileStorageService(tempRoot)
 
-            val exception = assertFailsWith<IllegalArgumentException> {
+            val exception = assertFailsWith<InvalidPathException> {
                 service.resolvePath("../../outside")
             }
 
@@ -156,7 +156,7 @@ class LocalFileStorageServiceTest {
 
             val service = LocalFileStorageService(tempRoot)
 
-            assertFailsWith<IllegalArgumentException> {
+            assertFailsWith<InvalidPathException> {
                 service.resolvePath("/linked/file.txt")
             }
         } finally {

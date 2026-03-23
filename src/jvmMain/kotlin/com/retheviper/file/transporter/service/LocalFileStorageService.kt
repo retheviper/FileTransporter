@@ -11,8 +11,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.io.asSink
 import java.nio.file.Files
 import java.nio.file.LinkOption
-import java.nio.file.NoSuchFileException
-import java.nio.file.NotDirectoryException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import kotlin.io.path.fileSize
@@ -68,7 +66,9 @@ class LocalFileStorageService(
             }
 
             val destinationDirectory = resolvePath(targetPathValue.orEmpty())
-            requireDirectory(destinationDirectory)
+            requireDirectory(destinationDirectory) { _ ->
+                TargetDirectoryNotFoundException("Target directory not found.")
+            }
 
             withContext(Dispatchers.IO) {
                 pendingUploads.forEach { upload ->
@@ -96,14 +96,18 @@ class LocalFileStorageService(
                 realParent.resolve(candidate.fileName ?: Path.of("")).normalize()
             }
         }
-        require(confinedCandidate.startsWith(realRootDirectory)) { "Invalid target path" }
+        if (!confinedCandidate.startsWith(realRootDirectory)) {
+            throw InvalidPathException("Invalid target path")
+        }
         return candidate
     }
 
     override suspend fun listPath(target: String): List<PathItem> {
         return withContext(Dispatchers.IO) {
             val directory = resolvePath(target)
-            requireDirectory(directory)
+            requireDirectory(directory) { _ ->
+                DirectoryNotFoundException("Directory not found.")
+            }
             Files.list(directory).use { stream ->
                 stream
                     .toList()
@@ -117,7 +121,7 @@ class LocalFileStorageService(
     override fun prepareDownload(path: String): Path {
         val resolvedPath = resolvePath(path)
         if (Files.notExists(resolvedPath)) {
-            throw NoSuchFileException(resolvedPath.toString())
+            throw FileNotFoundException("File not found.")
         }
         return resolvedPath
     }
@@ -133,12 +137,15 @@ class LocalFileStorageService(
         )
     }
 
-    private fun requireDirectory(path: Path) {
+    private fun requireDirectory(
+        path: Path,
+        createNotFoundException: (Path) -> FileStorageException
+    ) {
         if (Files.notExists(path)) {
-            throw NoSuchFileException(path.toString())
+            throw createNotFoundException(path)
         }
         if (!Files.isDirectory(path)) {
-            throw NotDirectoryException(path.toString())
+            throw TargetNotDirectoryException("Target is not a directory.")
         }
     }
 
